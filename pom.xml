@@ -87,6 +87,41 @@
           </systemPropertyVariables>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <version>1.5.2</version>
+        <executions>
+          <execution>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>replace</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <ignoreMissingFile>false</ignoreMissingFile>
+          <includes>
+            <include>target/classes/application.properties</include>
+          </includes>
+          <excludes></excludes>
+          <replacements>
+            <replacement>
+              <token>%release%</token>
+              <value>${project.version}</value>
+            </replacement>
+            <replacement>
+              <token>%gaTrackingID%</token>
+              <value>${env.SIGNOMIX_GA_TRACKING_ID}</value>
+            </replacement>
+            <replacement>
+              <token>%statuspageUrl%</token>
+              <value>${env.SIGNOMIX_STATUSPAGE_URL}</value>
+            </replacement>
+          </replacements>
+        </configuration>
+      </plugin>
+
     </plugins>
   </build>
   <profiles>
