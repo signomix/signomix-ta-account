@@ -6,18 +6,17 @@ import org.jboss.logging.Logger;
 
 import com.signomix.account.port.in.AccountPort;
 import com.signomix.account.port.in.AuthPort;
-import com.signomix.common.HashMaker;
-import com.signomix.common.Token;
 import com.signomix.common.User;
 
-import io.smallrye.common.annotation.NonBlocking;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
 
+@Path("/api/account")
 public class AccountRestApi {
 
     @Inject

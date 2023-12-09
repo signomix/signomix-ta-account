@@ -110,6 +110,16 @@ public class AuthLogic {
         return tokenObj;
     }
 
+    public Token createPermanentToken(User issuer, String uid, long lifetimeMinutes) {
+        Token tokenObj = null;
+        try {
+            tokenObj = authDao.createTokenForUser(issuer, uid, lifetimeMinutes, true);
+        } catch (Exception e) {
+            LOG.error(e.getMessage());
+        }
+        return tokenObj;
+    }
+
     /*
      * public User getUser(String uid) {
      * if(null==uid){

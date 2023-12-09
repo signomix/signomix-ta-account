@@ -25,9 +25,9 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
 
 @InboundAdapter
-@Path("/api/core")
+@Path("/api/user")
 public class UserRestAdapter {
-    
+
     @Inject
     Logger logger;
 
@@ -42,162 +42,194 @@ public class UserRestAdapter {
     String userDatabaseException;
 
     @GET
-    @Path("/user")
     public Response getUsers(
             @HeaderParam("Authentication") String token,
             @QueryParam("offset") int offset, @QueryParam("limit") int limit) {
 
-            List<User> users = null;
-            User authorizingUser;
-            try {
-                authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
-            } catch (IotDatabaseException e) {
-                logger.error("getUser: "+e.getMessage());
-                e.printStackTrace();
-                throw new ServiceException(unauthorizedException);
-            } catch (Exception e) {
-                logger.error("getUser: "+e.getMessage());
-                e.printStackTrace();
-                throw new ServiceException(unauthorizedException);
-            }
-            if (authorizingUser == null) {
-                throw new ServiceException(unauthorizedException);
-            }else{
-                logger.info("getUser uid from token: " + authorizingUser.uid);
-            }
-            try {
-                users = userPort.getUsers(authorizingUser, limit, offset);
-            } catch (IotDatabaseException e) {
-                e.printStackTrace();
-                throw new ServiceException(userDatabaseException);
-            }
-            return Response.ok().entity(users).build();
+        List<User> users = null;
+        User authorizingUser;
+        try {
+            authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
+        } catch (IotDatabaseException e) {
+            logger.error("getUser: " + e.getMessage());
+            e.printStackTrace();
+            throw new ServiceException(unauthorizedException);
+        } catch (Exception e) {
+            logger.error("getUser: " + e.getMessage());
+            e.printStackTrace();
+            throw new ServiceException(unauthorizedException);
+        }
+        if (authorizingUser == null) {
+            throw new ServiceException(unauthorizedException);
+        } else {
+            logger.info("getUser uid from token: " + authorizingUser.uid);
+        }
+        try {
+            users = userPort.getUsers(authorizingUser, limit, offset);
+        } catch (IotDatabaseException e) {
+            e.printStackTrace();
+            throw new ServiceException(userDatabaseException);
+        }
+        return Response.ok().entity(users).build();
     }
 
     @GET
-    @Path("/user/{uid}")
+    @Path("/{uid}")
     public Response getUser(
             @HeaderParam("Authentication") String token,
             @PathParam("uid") String uid) {
-            logger.info("Handling getUser request for uid token: " + uid+" "+token);
+        logger.info("Handling getUser request for uid token: " + uid + " " + token);
 
-            User user;
-            User authorizingUser;
-            try {
-                authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
-            } catch (IotDatabaseException e) {
-                logger.error("getUser: "+e.getMessage());
-                e.printStackTrace();
-                throw new ServiceException(unauthorizedException);
-            } catch (Exception e) {
-                logger.error("getUser: "+e.getMessage());
-                e.printStackTrace();
-                throw new ServiceException(unauthorizedException);
-            }
-            if (authorizingUser == null) {
-                throw new ServiceException(unauthorizedException);
-            }else{
-                logger.info("getUser uid from token: " + authorizingUser.uid);
-            }
-            try {
-                user = userPort.getUser(authorizingUser, uid);
-                user.sessionToken = token;
-            } catch (IotDatabaseException e) {
-                e.printStackTrace();
-                throw new ServiceException(userDatabaseException);
-            }
-            return Response.ok().entity(user).build();
+        User user;
+        User authorizingUser;
+        try {
+            authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
+        } catch (IotDatabaseException e) {
+            logger.error("getUser: " + e.getMessage());
+            e.printStackTrace();
+            throw new ServiceException(unauthorizedException);
+        } catch (Exception e) {
+            logger.error("getUser: " + e.getMessage());
+            e.printStackTrace();
+            throw new ServiceException(unauthorizedException);
+        }
+        if (authorizingUser == null) {
+            throw new ServiceException(unauthorizedException);
+        } else {
+            logger.info("getUser uid from token: " + authorizingUser.uid);
+        }
+        try {
+            user = userPort.getUser(authorizingUser, uid);
+            user.sessionToken = token;
+        } catch (IotDatabaseException e) {
+            e.printStackTrace();
+            throw new ServiceException(userDatabaseException);
+        }
+        return Response.ok().entity(user).build();
     }
 
     @PUT
-    @Path("/user/{uid}")
+    @Path("/{uid}")
     public Response updateUser(
             @HeaderParam("Authentication") String token,
             @PathParam("uid") String uid, User user) {
-            logger.info("Handling getUser request for uid token: " + uid+" "+token);
+        logger.info("Handling getUser request for uid token: " + uid + " " + token);
 
-            User authorizingUser;
-            try {
-                authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
-            } catch (IotDatabaseException e) {
-                logger.error("getUser: "+e.getMessage());
-                e.printStackTrace();
-                throw new ServiceException(unauthorizedException);
-            } catch (Exception e) {
-                logger.error("getUser: "+e.getMessage());
-                e.printStackTrace();
-                throw new ServiceException(unauthorizedException);
-            }
-            if (authorizingUser == null || !authorizingUser.uid.equals(uid) || !authorizingUser.uid.equals(user.uid)) {
-                throw new ServiceException(unauthorizedException);
-            }
-            try {
-                userPort.updateUser(authorizingUser, user);
-            } catch (IotDatabaseException e) {
-                e.printStackTrace();
-                throw new ServiceException(userDatabaseException);
-            }
-            return Response.ok().build();
+        User authorizingUser;
+        try {
+            authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
+        } catch (IotDatabaseException e) {
+            logger.error("getUser: " + e.getMessage());
+            e.printStackTrace();
+            throw new ServiceException(unauthorizedException);
+        } catch (Exception e) {
+            logger.error("getUser: " + e.getMessage());
+            e.printStackTrace();
+            throw new ServiceException(unauthorizedException);
+        }
+        if (authorizingUser == null || !authorizingUser.uid.equals(uid) || !authorizingUser.uid.equals(user.uid)) {
+            throw new ServiceException(unauthorizedException);
+        }
+        try {
+            userPort.updateUser(authorizingUser, user);
+        } catch (IotDatabaseException e) {
+            e.printStackTrace();
+            throw new ServiceException(userDatabaseException);
+        }
+        return Response.ok().build();
     }
 
     @POST
-    @Path("/user")
     public Response createUser(
             @HeaderParam("Authentication") String token, User user) {
-            User authorizingUser=null;
-            /* try {
-                //Token tokenObj = authPort.getToken(token);
-                authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
-            } catch (IotDatabaseException e) {
-                logger.error("getUser: "+e.getMessage());
-                e.printStackTrace();
-                throw new ServiceException(unauthorizedException);
+        User authorizingUser = null;
+        try {
+            try {
+                // Token tokenObj = authPort.getToken(token);
+                // authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
+                // } catch (IotDatabaseException e) {
+                // logger.error("getUser: "+e.getMessage());
+                // e.printStackTrace();
+                // throw new ServiceException(unauthorizedException);
             } catch (Exception e) {
-                logger.error("getUser: "+e.getMessage());
+                logger.error("getUser: " + e.getMessage());
                 e.printStackTrace();
-                throw new ServiceException(unauthorizedException);
-            } */
-            if (authorizingUser == null || !authorizingUser.uid.equals(user.uid) || !authorizingUser.uid.equals(user.uid)) {
                 throw new ServiceException(unauthorizedException);
             }
             try {
-                userPort.updateUser(authorizingUser, user);
+                userPort.createUser(authorizingUser, user);
             } catch (IotDatabaseException e) {
                 e.printStackTrace();
                 throw new ServiceException(userDatabaseException);
             }
             return Response.ok().build();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
     }
 
     @DELETE
-    @Path("/user/{uid}")
+    @Path("/{uid}")
     public Response deleteUser(
             @HeaderParam("Authentication") String token,
             @PathParam("uid") String uid) {
-            logger.info("Handling deleteUser request for uid token: " + uid+" "+token);
+        logger.info("Handling deleteUser request for uid token: " + uid + " " + token);
 
-            User authorizingUser;
-            try {
-                authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
-            } catch (IotDatabaseException e) {
-                logger.error("getUser: "+e.getMessage());
-                e.printStackTrace();
-                throw new ServiceException(unauthorizedException);
-            } catch (Exception e) {
-                logger.error("getUser: "+e.getMessage());
-                e.printStackTrace();
-                throw new ServiceException(unauthorizedException);
-            }
-            if (authorizingUser == null || !authorizingUser.uid.equals(uid)) {
-                throw new ServiceException(unauthorizedException);
-            }
-            try {
-                userPort.deleteUser(authorizingUser, uid);
-            } catch (IotDatabaseException e) {
-                e.printStackTrace();
-                throw new ServiceException(userDatabaseException);
-            }
-            return Response.ok().build();
+        User authorizingUser;
+        try {
+            authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
+        } catch (IotDatabaseException e) {
+            logger.error("getUser: " + e.getMessage());
+            e.printStackTrace();
+            throw new ServiceException(unauthorizedException);
+        } catch (Exception e) {
+            logger.error("getUser: " + e.getMessage());
+            e.printStackTrace();
+            throw new ServiceException(unauthorizedException);
+        }
+        if (authorizingUser == null || !authorizingUser.uid.equals(uid)) {
+            throw new ServiceException(unauthorizedException);
+        }
+        try {
+            userPort.deleteUser(authorizingUser, uid);
+        } catch (IotDatabaseException e) {
+            e.printStackTrace();
+            throw new ServiceException(userDatabaseException);
+        }
+        return Response.ok().build();
+    }
+
+    @GET
+    @Path("/confirm")
+    public Response confirmUser(
+            @QueryParam("token") String token) {
+        logger.info("Handling confirmUser request with token: " + token);
+        /*
+         * try {
+         * userPort.confirmUser(token);
+         * } catch (IotDatabaseException e) {
+         * e.printStackTrace();
+         * throw new ServiceException(userDatabaseException);
+         * }
+         */
+        return Response.ok().build();
+    }
+
+    @GET
+    @Path("/resetpassword")
+    public Response resetPassword(
+            @QueryParam("token") String token) {
+        logger.info("Handling confirmUser request with token: " + token);
+        /*
+         * try {
+         * userPort.resetPassword(token);
+         * } catch (IotDatabaseException e) {
+         * e.printStackTrace();
+         * throw new ServiceException(userDatabaseException);
+         * }
+         */
+        return Response.ok().build();
     }
 
 }
