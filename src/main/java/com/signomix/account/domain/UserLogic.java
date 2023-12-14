@@ -90,7 +90,7 @@ public class UserLogic {
             throw new ServiceException(userNotAuthorizedException);
         }
         User user = userDao.getUser(uid);
-        user.password = "***";
+        //user.password = "***";
         if (isSystemAdmin(authorizingUser)
                 || isOrganizationAdmin(authorizingUser, user.organization)
                 || authorizingUser.uid.equals(uid)) {

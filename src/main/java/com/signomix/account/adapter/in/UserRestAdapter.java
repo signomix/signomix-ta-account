@@ -100,6 +100,7 @@ public class UserRestAdapter {
         }
         try {
             user = userPort.getUser(authorizingUser, uid);
+            user.password = null;
             user.sessionToken = token;
         } catch (IotDatabaseException e) {
             e.printStackTrace();
