@@ -23,6 +23,10 @@ public class UserPort {
         return userLogic.getUser(user, uid);
     }
 
+    public User checkUser(String login){
+        return userLogic.checkUser(login);
+    }
+
     public void createUser(User authorizingUser, User user) throws IotDatabaseException {
         userLogic.createUser(authorizingUser, user);
     }

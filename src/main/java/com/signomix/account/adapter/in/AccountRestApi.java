@@ -1,20 +1,28 @@
 package com.signomix.account.adapter.in;
 
+import java.net.URI;
 import java.util.List;
 
 import org.jboss.logging.Logger;
 
 import com.signomix.account.port.in.AccountPort;
 import com.signomix.account.port.in.AuthPort;
+import com.signomix.account.port.in.UserPort;
 import com.signomix.common.User;
 
 import jakarta.inject.Inject;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response.Status;
+import jakarta.ws.rs.core.UriInfo;
 
 @Path("/api/account")
 public class AccountRestApi {
@@ -28,18 +36,39 @@ public class AccountRestApi {
     @Inject
     AccountPort accountPort;
 
+    @Inject
+    UserPort userPort;
+
+    @Context
+    UriInfo uriInfo;
+
+    /**
+     * Get account data.
+     * 
+     * @param token
+     * @param uid
+     * @return
+     */
     @GET
-    //@NonBlocking
-    public Response getUser(@HeaderParam("Authentication") String token, @QueryParam("limit") int limit,
-            @QueryParam("offset") int offset) {
+    @Path("/{uid}")
+    public Response getUser(@HeaderParam("Authentication") String token, @PathParam("uid") String uid) {
         User user = authPort.getUser(token);
         if (user == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
-        user = accountPort.getUser(user, user.uid);
+        user = accountPort.getAccount(user, user.uid);
         return Response.ok().entity(user).build();
     }
 
+    /**
+     * Get list of accounts.
+     * 
+     * @param token
+     * @param limit
+     * @param offset
+     * @param searchString
+     * @return
+     */
     @GET
     public Response getUsers(@HeaderParam("Authentication") String token, @QueryParam("limit") int limit,
             @QueryParam("offset") int offset, @QueryParam("search") String searchString) {
@@ -47,133 +76,189 @@ public class AccountRestApi {
         if (user == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
-        List<User> users = accountPort.getUsers(user, limit, offset, searchString);
+        List<User> users = accountPort.getAccounts(user, limit, offset, searchString);
         return Response.ok().entity(users).build();
     }
 
+    /**
+     * Register new account for user. Registering user must be organization admin or
+     * service admin.
+     * 
+     * @param token
+     * @param newUser
+     * @return
+     */
     @POST
-    public Response registerAccount(@HeaderParam("Authentication") String token, User newUser) {
+    public Response registerAccountFor(@HeaderParam("Authentication") String token, User newUser) {
         User user = authPort.getUser(token);
         if (user == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
         try {
-            //accountPort.registerAccount(user, newUser);
+            accountPort.registerAccount(user, newUser);
         } catch (Exception e) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
         return Response.ok().build();
     }
 
-/*     private User buildNewUser(String login, String email, String password,
-            String name, String surname, String preferredLanguage, String role, String type,
-            String generalNotifications, String infoNotifications, String warningNotifications,
-            String alertNotifications,
-            boolean withConfirmation, boolean isAdmin, Integer status) {
-        return null;
-        try {
-            String defaultRole = ""; // TODO: from config?
-            String defaultType = ""; // TODO: from config?
-            User newUser = new User();
-            newUser.uid = login;
-            newUser.email = email;
-            newUser.name = name;
-            newUser.surname = surname;
-            newUser.preferredLanguage = preferredLanguage;
-            newUser.password = HashMaker.md5Java(password);
-            if (null != role && isAdmin) {
-                newUser.role = role.toUpperCase();
-            } else {
-                newUser.role = defaultRole;
-            }
-
-            if (null != type && isAdmin) {
-                switch (type.toUpperCase()) {
-                    case "APPLICATION":
-                        newUser.type = User.APPLICATION;
-                        break;
-                    case "OWNER":
-                        newUser.type = User.OWNER;
-                        break;
-                    default:
-                        newUser.type = User.FREE;
-                        break;
-                }
-            } else {
-                newUser.setType(defaultType);
-            }
-            newUser.generalNotificationChannel = generalNotifications;
-            newUser.infoNotificationChannel = infoNotifications;
-            newUser.warningNotificationChannel = warningNotifications;
-            newUser.alertNotificationChannel = alertNotifications;
-            Long organization = null;
-            // validate
-            boolean valid = true;
-            if (!(newUser.uid != null && !newUser.uid.isEmpty())) {
-                valid = false;
-            }
-            if (!(newUser.email != null && !newUser.email.isEmpty())) {
-                valid = false;
-            }
-            if (!(newUser.password != null && !newUser.password.isEmpty())) {
-                valid = false;
-            }
-            if (organization != null) {
-                newUser.organization = organization;
-            }
-            if (null != status) {
-                newUser.authStatus = status;
-                if (newUser.getStatus() == User.IS_ACTIVE && admin) {
-                    newUser.setConfirmed(true);
-                    // Kernel.getInstance().dispatchEvent(new
-                    // UserEvent(UserEvent.USER_REG_CONFIRMED, newUser.getNumber()));
-                } else if (newUser.getStatus() == User.IS_UNREGISTERING) {
-                    newUser.setUnregisterRequested(true);
-                    // Kernel.getInstance().dispatchEvent(new UserEvent(UserEvent.USER_DEL_SHEDULED,
-                    // newUser.getUid()));
-                } else if (newUser.getStatus() == User.IS_CREATED) {
-                    // TODO: only OWNER user type is authorized to do this
-                    Token token = authAdapter.createPermanentToken(newUser.getUid(), "", true, "");
-                    newUser.confirmString = token.getToken();
-                }
-            } else {
-                Token token = authAdapter.createPermanentToken(newUser.getUid(), "", true, "");
-                newUser.confirmString = token.getToken();
-            }
-            if (!valid) {
-                throw new Exception("invalid user data");
-            }
-            // newUser = verifyNotificationsConfig(newUser, telegramNotifier);
-            newUser = userAdapter.register(newUser);
-            if (withConfirmation) {
-                result.setCode(HttpAdapter.SC_ACCEPTED);
-                // fire event to send "need confirmation" email
-                UserEvent ev = new UserEvent(UserEvent.USER_REGISTERED, newUser.getUid());
-                ev.setTimePoint("+5s");
-                Kernel.getInstance().dispatchEvent(ev);
-            } else {
-                userAdapter.confirmRegistration(newUser.getUid());
-                result.setCode(HttpAdapter.SC_CREATED);
-                // fire event to send "welcome" email
-                Kernel.getInstance().dispatchEvent(new UserEvent(UserEvent.USER_REG_CONFIRMED, newUser.getNumber()));
-            }
-            result.setData(newUser.getUid());
-        } catch (UserException e) {
-            if (e.getCode() == UserException.USER_ALREADY_EXISTS) {
-                result.setCode(HttpAdapter.SC_CONFLICT);
-            } else {
-                result.setCode(HttpAdapter.SC_BAD_REQUEST);
-            }
-            result.setMessage(e.getMessage());
-        } catch (NullPointerException e) {
-            e.printStackTrace();
-            result.setCode(HttpAdapter.SC_BAD_REQUEST);
-            result.setMessage(e.getMessage());
-        } catch (AuthException ex) {
-            result.setCode(HttpAdapter.SC_BAD_REQUEST);
-            result.setMessage("unable to create token");
+    /**
+     * Self registration of new account.
+     * 
+     * @param token
+     * @param newUser
+     * @return
+     */
+    @POST
+    @Path("/register")
+    public Response registerAccount(User newUser) {
+        User user = userPort.checkUser(newUser.uid);
+        if (user != null) {
+            return Response.status(Response.Status.CONFLICT).build();
         }
+        try {
+            accountPort.registerAccount(newUser);
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        return Response.ok().build();
+    }
 
-    } */
+    /**
+     * Upddate user data.
+     * 
+     * @param token
+     * @param uid
+     * @return
+     */
+    @PUT
+    @Path("/{uid}")
+    public Response updateAccount(@HeaderParam("Authentication") String token, @PathParam("uid") String uid,
+            User updatedUser) {
+        User user = authPort.getUser(token);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        try {
+            accountPort.modifyAccount(user, uid, updatedUser);
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        return Response.ok().build();
+    }
+
+    /**
+     * Change user data.
+     * 
+     * @param token
+     * @param uid
+     * @return
+     */
+    @DELETE
+    @Path("/{uid}")
+    public Response removeAccount(@HeaderParam("Authentication") String token, @PathParam("uid") String uid) {
+        User user = authPort.getUser(token);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        try {
+            accountPort.removeAccount(user, uid);
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        return Response.ok().build();
+    }
+
+    /**
+     * Request account removal.
+     * 
+     * @param token
+     * @param uid
+     * @return
+     */
+    @PUT
+    @Path("/{uid}")
+    public Response requestRemove(@HeaderParam("Authentication") String token, @PathParam("uid") String uid) {
+        User user = authPort.getUser(token);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        try {
+            accountPort.requestRemoveAccount(user, uid);
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        return Response.ok().build();
+    }
+
+    /**
+     * Change user password.
+     * 
+     * @param token
+     * @param uid
+     * @param newPassword
+     * @return
+     */
+    @PUT
+    @Path("/{uid}/password")
+    public Response changePassword(@HeaderParam("Authentication") String token, @PathParam("uid") String uid,
+            @QueryParam("password") String newPassword) {
+        User user = authPort.getUser(token);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        try {
+            accountPort.changePassword(user, uid, newPassword);
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        return Response.ok().build();
+    }
+
+    /**
+     * Reset user password.
+     * 
+     * @param token
+     * @param uid
+     * @param email
+     * @return
+     */
+    @POST
+    @Path("/{uid}/resetpassword")
+    public Response resetPassword(@HeaderParam("Authentication") String token, @PathParam("uid") String uid,
+            @QueryParam("email") String email) {
+        try {
+            accountPort.resetPassword(uid, email);
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        return Response.ok().build();
+    }
+
+    /**
+     * Confirm user registration.
+     * 
+     * @param token
+     * @param uid
+     * @param confirmString
+     * @return
+     */
+    @GET
+    @Path("/confirm")
+    public Response confirmRegistration(@QueryParam("key") String confirmString, @QueryParam("r") String redirectUrl) {
+        String regiseredUser = null;
+        try {
+            regiseredUser = accountPort.confirmRegistration(confirmString);
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        if (regiseredUser == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        } else {
+            return Response.status(Response.Status.SEE_OTHER)
+                    .location(URI.create(redirectUrl))
+                    .build();
+        }
+    }
 
 }

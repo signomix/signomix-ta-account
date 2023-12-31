@@ -100,6 +100,23 @@ public class UserLogic {
         }
     }
 
+    public String confirmRegistration(String token){
+        return authLogic.getUserId(token);
+    }
+
+    public User checkUser(String uid){
+        User user = null;
+        try {
+            user=userDao.getUser(uid);
+            if(user!=null){
+                user=new User(); // dummy, for check only       
+            }  
+        } catch (IotDatabaseException e) {
+        }
+
+        return user;
+    }
+
     public void createUser(User authorizingUser, User user) {
         User newUser = new User();
         // user can update only himself or if he is system admin or organization admin
@@ -116,10 +133,10 @@ public class UserLogic {
 
         newUser = verifyUser(authorizingUser, user);
 
-        user.createdAt = System.currentTimeMillis();
+        newUser.createdAt = System.currentTimeMillis();
         newUser.password = HashMaker.md5Java(user.password);
-        user.authStatus = User.IS_CREATED;
-        user.unregisterRequested = false;
+        newUser.authStatus = User.IS_CREATED;
+        newUser.unregisterRequested = false;
         newUser.confirmed = false;
         Token token = authLogic.createPermanentToken(newUser, user.uid, 24*60);
         logger.info("token: " + token);
@@ -134,6 +151,7 @@ public class UserLogic {
                 sendUserEvent("event", authorizingUser, user.uid);
             }
         } catch (IotDatabaseException e) {
+            //authLogic.removePermanentToken(token); //TODO
             throw new ServiceException(e.getMessage());
         }
     }
@@ -141,6 +159,34 @@ public class UserLogic {
     private void sendUserEvent(String userEventType, User authorizingUser, String userUid) {
         String authorizingUserUid = authorizingUser == null ? "" : authorizingUser.uid;
         eventEmitter.send(userEventType + mqttFieldSeparator + authorizingUserUid + mqttFieldSeparator + userUid);
+    }
+
+    public void resetPassword(String uid, String email){
+        User user = null;
+        try {
+            user=userDao.getUser(uid);
+        } catch (IotDatabaseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        if(user==null){
+            throw new ServiceException("User not found");
+        }
+        if(!user.email.equals(email)){
+            throw new ServiceException("Email not found");
+        }
+        Token token = authLogic.createPermanentToken(user, uid, 24*60);
+        logger.info("token: " + token);
+        user.confirmString = token.getToken();
+        try {
+            userDao.updateUser(user);
+            sendUserEvent("password_reset", null, uid);
+        } catch (IotDatabaseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            throw new ServiceException("not updated");
+        }
+        
     }
 
     public void updateUser(User authorizingUser, User user) throws IotDatabaseException {
@@ -218,6 +264,20 @@ public class UserLogic {
         }
         userDao.modifyUserPassword(actualUser.number, HashMaker.md5Java(password));
         sendUserEvent("password_changed", authorizingUser, uid);
+    }
+
+    /**
+     * Register user's request for account removal. 
+     * @param login
+     */
+    public void requestRemoveAccount(User user) {
+    }
+
+    /**
+     * Removes account and all related data
+     * @param login
+     */
+    public void removeAccount(String login) {
     }
 
     /**
