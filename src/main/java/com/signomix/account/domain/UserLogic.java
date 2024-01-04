@@ -266,6 +266,15 @@ public class UserLogic {
         sendUserEvent("password_changed", authorizingUser, uid);
     }
 
+    public void modifyPassword(User user) throws IotDatabaseException {
+        User actualUser = userDao.getUser(user.uid);
+        if (actualUser == null) {
+            throw new ServiceException("User not found");
+        }
+        userDao.modifyUserPassword(actualUser.number, HashMaker.md5Java(user.password));
+        sendUserEvent("password_changed", actualUser, actualUser.uid);
+    }
+
     /**
      * Register user's request for account removal. 
      * @param login

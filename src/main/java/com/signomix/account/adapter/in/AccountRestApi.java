@@ -21,7 +21,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.Response.Status;
 import jakarta.ws.rs.core.UriInfo;
 
 @Path("/api/account")
@@ -124,6 +123,21 @@ public class AccountRestApi {
         return Response.ok().build();
     }
 
+/*     @POST
+    @Path("/password")
+    public Response saveNewPassword(@HeaderParam("Authentication") String token, User newUser) {
+        User user = authPort.getUser(token);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        try {
+            accountPort.changePassword(newUser);
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        return Response.ok().build();
+    } */
+
     /**
      * Upddate user data.
      * 
@@ -202,14 +216,16 @@ public class AccountRestApi {
     @PUT
     @Path("/{uid}/password")
     public Response changePassword(@HeaderParam("Authentication") String token, @PathParam("uid") String uid,
-            @QueryParam("password") String newPassword) {
+            User modifiedUser) {
         User user = authPort.getUser(token);
-        if (user == null) {
+        if (user == null || !user.uid.equals(uid) || !user.uid.equals(modifiedUser.uid)) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
         try {
-            accountPort.changePassword(user, uid, newPassword);
+            accountPort.changePassword(user, uid, modifiedUser.password);
         } catch (Exception e) {
+            logger.error(e.getMessage());
+            e.printStackTrace();
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
         return Response.ok().build();
@@ -225,11 +241,12 @@ public class AccountRestApi {
      */
     @POST
     @Path("/{uid}/resetpassword")
-    public Response resetPassword(@HeaderParam("Authentication") String token, @PathParam("uid") String uid,
+    public Response resetPassword(@PathParam("uid") String uid,
             @QueryParam("email") String email) {
         try {
             accountPort.resetPassword(uid, email);
         } catch (Exception e) {
+            e.printStackTrace();
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
         return Response.ok().build();

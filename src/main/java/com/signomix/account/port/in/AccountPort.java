@@ -19,7 +19,7 @@ public class AccountPort {
     UserLogic userLogic;
 
     public User getAccount(User user, String uid) {
-        //return accountLogic.getAccount(user, uid);
+        // return accountLogic.getAccount(user, uid);
         try {
             return userLogic.getUser(user, uid);
         } catch (IotDatabaseException e) {
@@ -30,7 +30,7 @@ public class AccountPort {
     }
 
     public List<User> getAccounts(User user, int limit, int offset, String searchString) {
-        //return accountLogic.getAccounts(user, limit, offset, searchString);
+        // return accountLogic.getAccounts(user, limit, offset, searchString);
         try {
             return userLogic.getUsers(user, limit, offset);
         } catch (IotDatabaseException e) {
@@ -40,13 +40,17 @@ public class AccountPort {
         }
     }
 
+    public void changePassword(User newUser) throws IotDatabaseException {
+        userLogic.modifyPassword(newUser);
+    }
+
     public void registerAccount(User newUser) {
-        //accountLogic.registerAccount(newUser);
+        // accountLogic.registerAccount(newUser);
         userLogic.createUser(null, newUser);
     }
 
     public void registerAccount(User user, User newUser) {
-        //accountLogic.registerAccount(user, newUser);
+        // accountLogic.registerAccount(user, newUser);
         userLogic.createUser(user, newUser);
     }
 
@@ -55,7 +59,7 @@ public class AccountPort {
     }
 
     public void requestRemoveAccount(User user, String uid) {
-        //accountLogic.requestRemoveAccount(user, uid);
+        // accountLogic.requestRemoveAccount(user, uid);
         userLogic.requestRemoveAccount(user);
     }
 
@@ -63,22 +67,17 @@ public class AccountPort {
         userLogic.removeAccount(uid);
     }
 
-    public void changePassword(User user, String uid, String newPassword) {
-        //accountLogic.changePassword(user, uid, newPassword);
-        try {
-            userLogic.modifyUserPassword(user, uid, newPassword);
-        } catch (IotDatabaseException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+    public void changePassword(User user, String uid, String newPassword) throws IotDatabaseException {
+        // accountLogic.changePassword(user, uid, newPassword);
+        userLogic.modifyUserPassword(user, uid, newPassword);
     }
 
     public void resetPassword(String uid, String email) {
-        userLogic.resetPassword(uid,email);
+        userLogic.resetPassword(uid, email);
     }
 
     public void modifyAccount(User user, String uid, User newUser) {
-        //accountLogic.modifyAccount(user, uid, newUser);
+        // accountLogic.modifyAccount(user, uid, newUser);
         try {
             userLogic.updateUser(user, newUser);
         } catch (IotDatabaseException e) {
@@ -86,5 +85,5 @@ public class AccountPort {
             e.printStackTrace();
         }
     }
-    
+
 }
