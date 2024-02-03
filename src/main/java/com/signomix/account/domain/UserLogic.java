@@ -175,7 +175,7 @@ public class UserLogic {
         if(!user.email.equals(email)){
             throw new ServiceException("Email not found");
         }
-        Token token = authLogic.createPermanentToken(user, uid, 24*60);
+        Token token = authLogic.createPermanentToken(user, uid, 1*60);
         logger.info("token: " + token);
         user.confirmString = token.getToken();
         try {
