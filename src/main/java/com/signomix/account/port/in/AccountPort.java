@@ -44,14 +44,16 @@ public class AccountPort {
         userLogic.modifyPassword(newUser);
     }
 
-    public void registerAccount(User newUser) {
+    public void registerAccount(User newUser) throws IotDatabaseException{
         // accountLogic.registerAccount(newUser);
-        userLogic.createUser(null, newUser);
+        //userLogic.createUser(null, newUser);
+        userLogic.saveUser(null, newUser, true);
     }
 
-    public void registerAccount(User user, User newUser) {
+    public void registerAccount(User user, User newUser) throws IotDatabaseException{
         // accountLogic.registerAccount(user, newUser);
-        userLogic.createUser(user, newUser);
+        //userLogic.createUser(user, newUser);
+        userLogic.saveUser(user, newUser, true);
     }
 
     public String confirmRegistration(String confirmString) {
@@ -79,7 +81,7 @@ public class AccountPort {
     public void modifyAccount(User user, String uid, User newUser) {
         // accountLogic.modifyAccount(user, uid, newUser);
         try {
-            userLogic.updateUser(user, newUser);
+            userLogic.saveUser(user, newUser, false);
         } catch (IotDatabaseException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

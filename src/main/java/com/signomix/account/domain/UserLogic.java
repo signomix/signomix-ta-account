@@ -1,5 +1,6 @@
 package com.signomix.account.domain;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -90,9 +91,9 @@ public class UserLogic {
             throw new ServiceException(userNotAuthorizedException);
         }
         User user = userDao.getUser(uid);
-        //user.password = "***";
         if (isSystemAdmin(authorizingUser)
                 || isOrganizationAdmin(authorizingUser, user.organization)
+                || isTenantAdmin(authorizingUser, user.organization)
                 || authorizingUser.uid.equals(uid)) {
             return user;
         } else {
@@ -100,24 +101,24 @@ public class UserLogic {
         }
     }
 
-    public String confirmRegistration(String token){
+    public String confirmRegistration(String token) {
         return authLogic.getUserId(token);
     }
 
-    public User checkUser(String uid){
+    public User checkUser(String uid) {
         User user = null;
         try {
-            user=userDao.getUser(uid);
-            if(user!=null){
-                user=new User(); // dummy, for check only       
-            }  
+            user = userDao.getUser(uid);
+            if (user != null) {
+                user = new User(); // dummy, for check only
+            }
         } catch (IotDatabaseException e) {
         }
 
         return user;
     }
 
-    public void createUser(User authorizingUser, User user) {
+/*     public void createUser(User authorizingUser, User user) {
         User newUser = new User();
         // user can update only himself or if he is system admin or organization admin
         if (null != authorizingUser) {
@@ -127,7 +128,7 @@ public class UserLogic {
             }
         }
 
-        if(null==authorizingUser){
+        if (null == authorizingUser) {
             user.organization = defaultOrganizationId;
         }
 
@@ -138,7 +139,7 @@ public class UserLogic {
         newUser.authStatus = User.IS_CREATED;
         newUser.unregisterRequested = false;
         newUser.confirmed = false;
-        Token token = authLogic.createPermanentToken(newUser, user.uid, 24*60);
+        Token token = authLogic.createPermanentToken(newUser, user.uid, 24 * 60);
         logger.info("token: " + token);
         newUser.confirmString = token.getToken();
         try {
@@ -151,31 +152,31 @@ public class UserLogic {
                 sendUserEvent("event", authorizingUser, user.uid);
             }
         } catch (IotDatabaseException e) {
-            //authLogic.removePermanentToken(token); //TODO
+            // authLogic.removePermanentToken(token); //TODO
             throw new ServiceException(e.getMessage());
         }
-    }
+    } */
 
     private void sendUserEvent(String userEventType, User authorizingUser, String userUid) {
         String authorizingUserUid = authorizingUser == null ? "" : authorizingUser.uid;
         eventEmitter.send(userEventType + mqttFieldSeparator + authorizingUserUid + mqttFieldSeparator + userUid);
     }
 
-    public void resetPassword(String uid, String email){
+    public void resetPassword(String uid, String email) {
         User user = null;
         try {
-            user=userDao.getUser(uid);
+            user = userDao.getUser(uid);
         } catch (IotDatabaseException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        if(user==null){
+        if (user == null) {
             throw new ServiceException("User not found");
         }
-        if(!user.email.equals(email)){
+        if (!user.email.equals(email)) {
             throw new ServiceException("Email not found");
         }
-        Token token = authLogic.createPermanentToken(user, uid, 1*60);
+        Token token = authLogic.createPermanentToken(user, uid, 1 * 60);
         logger.info("token: " + token);
         user.confirmString = token.getToken();
         try {
@@ -186,39 +187,106 @@ public class UserLogic {
             e.printStackTrace();
             throw new ServiceException("not updated");
         }
-        
+
     }
 
-    public void updateUser(User authorizingUser, User user) throws IotDatabaseException {
-        User actualUser = userDao.getUser(user.uid);
-        if (actualUser == null) {
-            throw new ServiceException("User not found");
+    public void saveUser(User authorizingUser, User user, boolean newUser) throws IotDatabaseException {
+        try {
+            if (!newUser) {
+                logger.info("updateUser: " + user.uid);
+            } else {
+                logger.info("createUser: " + user.uid);
+            }
+            User actualUser = null;
+            if (!newUser) {
+                actualUser = userDao.getUser(user.uid);
+                if (actualUser == null) {
+                    throw new ServiceException("User not found");
+                }
+            }
+            // user can be updated or created only by himself
+            // or by system admin or organization admin or organization tenant admin
+            if (authorizingUser != null) {
+                if (!(authorizingUser.uid.equalsIgnoreCase(user.uid)
+                        || isSystemAdmin(authorizingUser)
+                        || isOrganizationAdmin(authorizingUser, actualUser.organization)
+                        || isTenantAdmin(authorizingUser, actualUser.organization))) {
+                    throw new ServiceException(userNotAuthorizedException);
+                }
+            }
+            // user modification cannot be done anonymously
+            if (authorizingUser == null && !newUser) {
+                throw new ServiceException(userNotAuthorizedException);
+            }
+
+            User updatedUser = null;
+            if (newUser) {
+                updatedUser = User.clone(user);
+                updatedUser = User.clone(user);
+                updatedUser.number = null;
+                updatedUser.organization = defaultOrganizationId;
+                updatedUser.authStatus = User.IS_CREATED;
+            } else {
+                updatedUser = User.clone(actualUser);
+            }
+
+            updatedUser.type = getAcceptedType(authorizingUser, user.type);
+
+            if (user.password != null) {
+                updatedUser.password = HashMaker.md5Java(user.password);
+            }
+
+            if (isSystemAdmin(authorizingUser)) {
+                if (user.organization != null)
+                    updatedUser.organization = user.organization;
+                if (user.credits != null)
+                    updatedUser.credits = user.credits;
+                if (user.services != null)
+                    updatedUser.services = user.services;
+            } else {
+                if (authorizingUser != null) {
+                    updatedUser.organization = authorizingUser.organization;
+                }
+            }
+            if (isSystemAdmin(authorizingUser)
+                    || isOrganizationAdmin(authorizingUser, user.organization)
+                    || isTenantAdmin(authorizingUser, user.organization)) {
+                if (user.unregisterRequested != null)
+                    updatedUser.unregisterRequested = user.unregisterRequested;
+                if (user.authStatus != null)
+                    updatedUser.authStatus = user.authStatus;
+                if (user.confirmString != null)
+                    updatedUser.confirmString = user.confirmString;
+                if (user.confirmed != null)
+                    updatedUser.confirmed = user.confirmed;
+                if (user.role != null)
+                    updatedUser.role = user.role;
+                if (user.path != null)
+                    updatedUser.path = user.path;
+            }
+
+            if (newUser) {
+                updatedUser.createdAt = System.currentTimeMillis();
+                updatedUser.password = HashMaker.md5Java(user.password);
+                updatedUser.unregisterRequested = false;
+                updatedUser.confirmed = false;
+                Token token = authLogic.createPermanentToken(updatedUser, user.uid, 24 * 60);
+                updatedUser.confirmString = token.getToken();
+                userDao.addUser(updatedUser);
+                if (updatedUser.authStatus == User.IS_CREATED) {
+                    sendUserEvent("created", authorizingUser, user.uid);
+                } else if (updatedUser.authStatus == User.IS_ACTIVE) {
+                    sendUserEvent("created_and_activated", authorizingUser, user.uid);
+                } else {
+                    sendUserEvent("event", authorizingUser, user.uid);
+                }
+            } else {
+                userDao.updateUser(updatedUser);
+                sendUserEvent("updated", authorizingUser, updatedUser.uid);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        user.number = actualUser.number;
-        // user.password = HashMaker.md5Java(actualUser.password);
-        user.sessionToken = actualUser.sessionToken;
-        user.createdAt = actualUser.createdAt;
-        // user can update only himself or if he is system admin or organization admin
-        if (!(isOrganizationAdmin(authorizingUser, actualUser.organization)
-                || isSystemAdmin(authorizingUser) || authorizingUser.uid.equals(user.uid))) {
-            throw new ServiceException(userNotAuthorizedException);
-        }
-        if (!isSystemAdmin(authorizingUser)) {
-            user.organization = actualUser.organization;
-            user.uid = actualUser.uid;
-            user.type = actualUser.type;
-            user.credits = actualUser.credits;
-            user.services = actualUser.services;
-            user.unregisterRequested = actualUser.unregisterRequested;
-        } else if (!isOrganizationAdmin(authorizingUser, actualUser.organization)) {
-            user.authStatus = actualUser.authStatus;
-            user.confirmString = actualUser.confirmString;
-            user.confirmed = actualUser.confirmed;
-            user.role = actualUser.role;
-        }
-        userDao.updateUser(user);
-        logger.info("sending updated event");
-        sendUserEvent("updated", authorizingUser, user.uid);
     }
 
     public void deleteUser(User authorizingUser, String uid) throws IotDatabaseException {
@@ -252,6 +320,74 @@ public class UserLogic {
         }
     }
 
+    @Deprecated
+    public List<User> getUsers(User authorizingUser, Long organizationId, Integer limit, Integer offset)
+            throws IotDatabaseException {
+        if (authorizingUser == null) {
+            throw new ServiceException(userNotAuthorizedException);
+        }
+        if (isSystemAdmin(authorizingUser)) {
+            return userDao.getUsers(limit, offset);
+        } else if (isOrganizationAdmin(authorizingUser, authorizingUser.organization)) {
+            return userDao.getOrganizationUsers(authorizingUser.organization, limit, offset);
+        } else {
+            throw new ServiceException(userNotAuthorizedException);
+        }
+    }
+
+    public List<User> getUsers(User authorizingUser, Long organizationId, Integer tenantId, Integer limit,
+            Integer offset, String search) throws IotDatabaseException {
+        logger.info("getUsers " + organizationId + " " + tenantId + " " + limit + " " + offset + " " + search);
+        ArrayList<User> users = new ArrayList<>();
+        if (authorizingUser == null) {
+            throw new ServiceException(userNotAuthorizedException);
+        }
+        String searchArray[];
+        if (search == null) {
+            search = "";
+        }
+        searchArray = search.split(":");
+        switch (searchArray[0]) {
+            case "name":
+                search = searchArray[1];
+                break;
+            case "login":
+                search = searchArray[1];
+                break;
+            default:
+                search = "";
+                break;
+        }
+        logger.info("isSystemAdmin(authorizingUser): " + isSystemAdmin(authorizingUser));
+        logger.info("isOrganizationAdmin(authorizingUser, organizationId): "
+                + isOrganizationAdmin(authorizingUser, organizationId));
+        logger.info(
+                "isTenantAdmin(authorizingUser, organizationId): " + isTenantAdmin(authorizingUser, organizationId));
+
+        if (organizationId == null && isSystemAdmin(authorizingUser)) {
+            logger.info("getOrganizationUsers1");
+            users = (ArrayList) userDao.getUsers(limit, offset);
+        }
+
+        if (organizationId != null && tenantId == null) {
+            if (isOrganizationAdmin(authorizingUser, organizationId) || isSystemAdmin(authorizingUser)
+                    || isTenantAdmin(authorizingUser, organizationId)) {
+                logger.info("getOrganizationUsers2");
+                users = (ArrayList) userDao.getOrganizationUsers(organizationId, limit, offset);
+            } else {
+                logger.info("getOrganizationUsers2a");
+            }
+        }
+
+        if (organizationId != null && tenantId != null
+                && (isSystemAdmin(authorizingUser) || isOrganizationAdmin(authorizingUser, organizationId)
+                        || isTenantAdmin(authorizingUser, organizationId))) {
+            logger.info("getOrganizationUsers3");
+            users = (ArrayList) userDao.getTenantUsers(tenantId, limit, offset);
+        }
+        return users;
+    }
+
     public void modifyUserPassword(User authorizingUser, String uid, String password) throws IotDatabaseException {
         User actualUser = userDao.getUser(uid);
         if (actualUser == null) {
@@ -276,7 +412,8 @@ public class UserLogic {
     }
 
     /**
-     * Register user's request for account removal. 
+     * Register user's request for account removal.
+     * 
      * @param login
      */
     public void requestRemoveAccount(User user) {
@@ -284,6 +421,7 @@ public class UserLogic {
 
     /**
      * Removes account and all related data
+     * 
      * @param login
      */
     public void removeAccount(String login) {
@@ -322,6 +460,10 @@ public class UserLogic {
         logger.info("user.organization: " + user.organization);
         logger.info("organizationId: " + organizationId);
         return user != null && user.organization == organizationId;
+    }
+
+    public boolean isTenantAdmin(User user, long organizationId) {
+        return user != null && user.organization == organizationId && user.type == User.MANAGING_ADMIN;
     }
 
     /**
@@ -431,7 +573,7 @@ public class UserLogic {
             changedUser.role = user.role;
             changedUser.unregisterRequested = user.unregisterRequested;
             changedUser.confirmString = user.confirmString;
-            if(organizationAdmin){
+            if (organizationAdmin) {
                 changedUser.organization = userDoingChange.organization;
             }
         }
@@ -445,12 +587,42 @@ public class UserLogic {
         if (null == changedUser.type) {
             changedUser.type = User.FREE;
         }
-        if(null==changedUser.unregisterRequested){
-            changedUser.unregisterRequested=false;
+        if (null == changedUser.unregisterRequested) {
+            changedUser.unregisterRequested = false;
         }
-        if(changedUser.authStatus==null){
-            changedUser.authStatus=User.IS_CREATED;
+        if (changedUser.authStatus == null) {
+            changedUser.authStatus = User.IS_CREATED;
         }
         return changedUser;
+    }
+
+    private int getAcceptedType(User authorizunUser, int requestedType) {
+        if (authorizunUser == null) {
+            return User.FREE;
+        }
+        if (isSystemAdmin(authorizunUser)) {
+            return requestedType;
+        } else if (isOrganizationAdmin(authorizunUser, authorizunUser.organization)) {
+            switch (requestedType) {
+                case User.ADMIN:
+                case User.MANAGING_ADMIN:
+                case User.FREE:
+                case User.USER:
+                    return requestedType;
+                default:
+                    return User.FREE;
+            }
+        } else if (isTenantAdmin(authorizunUser, authorizunUser.organization)) {
+            switch (requestedType) {
+                case User.MANAGING_ADMIN:
+                case User.FREE:
+                case User.USER:
+                    return requestedType;
+                default:
+                    return User.FREE;
+            }
+        } else {
+            return User.FREE;
+        }
     }
 }

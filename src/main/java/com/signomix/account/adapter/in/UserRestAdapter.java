@@ -66,7 +66,7 @@ public class UserRestAdapter {
         }
         try {
             users = userPort.getUsers(authorizingUser, limit, offset);
-        } catch (IotDatabaseException e) {
+        } catch (ServiceException|IotDatabaseException e) {
             e.printStackTrace();
             throw new ServiceException(userDatabaseException);
         }
@@ -101,7 +101,8 @@ public class UserRestAdapter {
         try {
             user = userPort.getUser(authorizingUser, uid);
             user.password = null;
-            user.sessionToken = token;
+            //user.sessionToken = token; //TODO: is this necessary?
+            user.sessionToken=null;
         } catch (IotDatabaseException e) {
             e.printStackTrace();
             throw new ServiceException(userDatabaseException);
@@ -128,9 +129,9 @@ public class UserRestAdapter {
             e.printStackTrace();
             throw new ServiceException(unauthorizedException);
         }
-        if (authorizingUser == null || !authorizingUser.uid.equals(uid) || !authorizingUser.uid.equals(user.uid)) {
+/*         if (authorizingUser == null || !authorizingUser.uid.equals(uid) || !authorizingUser.uid.equals(user.uid)) {
             throw new ServiceException(unauthorizedException);
-        }
+        } */
         try {
             userPort.updateUser(authorizingUser, user);
         } catch (IotDatabaseException e) {

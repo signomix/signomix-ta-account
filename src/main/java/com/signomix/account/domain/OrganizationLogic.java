@@ -9,6 +9,7 @@ import com.signomix.account.exception.ServiceException;
 import com.signomix.common.Organization;
 import com.signomix.common.User;
 import com.signomix.common.db.IotDatabaseException;
+import com.signomix.common.db.OrganizationDaoIface;
 import com.signomix.common.db.UserDao;
 import com.signomix.common.db.UserDaoIface;
 import com.signomix.common.gui.Dashboard;
@@ -37,6 +38,7 @@ public class OrganizationLogic {
     AgroalDataSource userDataSource;
 
     UserDaoIface userDao;
+    OrganizationDaoIface organizationDao;
 
     @ConfigProperty(name = "signomix.exception.api.unauthorized")
     String userNotAuthorizedException;
@@ -58,6 +60,8 @@ public class OrganizationLogic {
             userDao.setDatasource(userDataSource);
             //iotDao = new com.signomix.common.tsdb.IotDatabaseDao();
             //iotDao.setDatasource(tsDs);
+            organizationDao = new com.signomix.common.tsdb.OrganizationDao();
+            organizationDao.setDatasource(userDataSource);
             defaultOrganizationId = 1;
         } else {
             logger.error("Unknown database type: " + databaseType);
@@ -73,40 +77,40 @@ public class OrganizationLogic {
 
     public List<Organization> getOrganizations(Integer limit, Integer offset) throws ServiceException {
         try {
-            return userDao.getOrganizations(limit, offset);
+            return organizationDao.getOrganizations(limit, offset);
         } catch (IotDatabaseException e) {
             throw new ServiceException(e.getMessage());
         }
     }
 
-    public Organization getOrganization(long organizationId) throws ServiceException {
+    public Organization getOrganization(User user, long organizationId) throws ServiceException {
         try {
-            return userDao.getOrganization(organizationId);
+            return organizationDao.getOrganization(organizationId);
         } catch (IotDatabaseException e) {
             e.printStackTrace();
             throw new ServiceException(e.getMessage());
         }
     }
 
-    public void addOrganization(Organization organization) throws ServiceException {
+    public void addOrganization(User user, Organization organization) throws ServiceException {
         try {
-            userDao.addOrganization(organization);
+            organizationDao.addOrganization(organization);
         } catch (IotDatabaseException e) {
             throw new ServiceException(e.getMessage());
         }
     }
 
-    public void updateOrganization(Organization organization) throws ServiceException {
+    public void updateOrganization(User user, Organization organization) throws ServiceException {
         try {
-            userDao.updateOrganization(organization);
+            organizationDao.updateOrganization(organization);
         } catch (IotDatabaseException e) {
             throw new ServiceException(e.getMessage());
         }
     }
 
-    public void deleteOrganization(long organizationId) throws ServiceException {
+    public void deleteOrganization(User user, long organizationId) throws ServiceException {
         try {
-            userDao.deleteOrganization(organizationId);
+            organizationDao.deleteOrganization(organizationId);
         } catch (IotDatabaseException e) {
             throw new ServiceException(e.getMessage());
         }
