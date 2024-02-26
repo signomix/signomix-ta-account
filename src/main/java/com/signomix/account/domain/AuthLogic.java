@@ -4,6 +4,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import com.signomix.common.Token;
+import com.signomix.common.TokenType;
 import com.signomix.common.User;
 import com.signomix.common.db.AuthDao;
 import com.signomix.common.db.AuthDaoIface;
@@ -110,14 +111,14 @@ public class AuthLogic {
         return tokenObj;
     }
 
-    public Token createPermanentToken(User issuer, String uid, long lifetimeMinutes) {
-        Token tokenObj = null;
+    public Token createPermanentToken(User issuer, String uid, long lifetimeMinutes, TokenType tokenType, String payload) {
+        Token token = null;
         try {
-            tokenObj = authDao.createTokenForUser(issuer, uid, lifetimeMinutes, true);
+            token = authDao.createTokenForUser(issuer, uid, lifetimeMinutes, true, tokenType, payload);
         } catch (Exception e) {
             LOG.error(e.getMessage());
         }
-        return tokenObj;
+        return token;
     }
 
     /*

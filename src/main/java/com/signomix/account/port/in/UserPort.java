@@ -51,9 +51,9 @@ public class UserPort {
         return userLogic.getUsers(authorizingUser, limit, offset);
     }
 
-    public List<User> getUsers(User authorizingUser, Long organization, int limit, int offset) throws IotDatabaseException {
+   /*  public List<User> getUsers(User authorizingUser, Long organization, int limit, int offset) throws IotDatabaseException {
         return userLogic.getUsers(authorizingUser, organization, limit, offset);
-    }
+    } */
 
     public List<User> getUsers(User authorizingUser, Long organization, Integer tenant, int limit, int offset, String search) throws IotDatabaseException {
         return userLogic.getUsers(authorizingUser, organization, tenant, limit, offset, search);

@@ -191,7 +191,7 @@ public class AccountRestApi {
      * @return
      */
     @PUT
-    @Path("/{uid}")
+    @Path("/{uid}/remove")
     public Response requestRemove(@HeaderParam("Authentication") String token, @PathParam("uid") String uid) {
         User user = authPort.getUser(token);
         if (user == null) {
@@ -218,7 +218,7 @@ public class AccountRestApi {
     public Response changePassword(@HeaderParam("Authentication") String token, @PathParam("uid") String uid,
             User modifiedUser) {
         User user = authPort.getUser(token);
-        if (user == null || !user.uid.equals(uid) || !user.uid.equals(modifiedUser.uid)) {
+        if (user == null/*  || !user.uid.equals(uid) || !user.uid.equals(modifiedUser.uid) */) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
         try {
