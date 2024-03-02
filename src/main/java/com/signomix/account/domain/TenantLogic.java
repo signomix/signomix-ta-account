@@ -38,6 +38,17 @@ public class TenantLogic {
         organiaztionDao.setDatasource(tsDs);
     }
 
+    public Tenant getTenantById(User user, Integer tenantId) throws IotDatabaseException {
+        Tenant tenant = organiaztionDao.getTenant(tenantId);
+        if(tenant==null){
+            throw new IotDatabaseException(IotDatabaseException.UNKNOWN, "Tenant not found" );
+        }
+        if(user.organization!=tenant.organizationId){
+            throw new IotDatabaseException(IotDatabaseException.UNKNOWN, "Tenant not found" );
+        }
+        return tenant;
+    }
+
     public Tenant getTenantByRoot(User user, Long organizationId, String root) throws IotDatabaseException {
         if(user.organization!=organizationId){
             throw new IotDatabaseException(IotDatabaseException.UNKNOWN, "Tenant not found" );

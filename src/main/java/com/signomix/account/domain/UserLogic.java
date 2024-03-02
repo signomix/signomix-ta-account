@@ -233,6 +233,9 @@ public class UserLogic {
                     throw new ServiceException("User not found");
                 }
             }
+            if(user.organization==null){
+                user.organization=defaultOrganizationId;
+            }
             // user can be updated or created only by himself
             // or by system admin or organization admin or organization tenant admin
             if (authorizingUser != null) {
@@ -322,6 +325,15 @@ public class UserLogic {
                 updatedUser.password = HashMaker.md5Java(user.password);
                 updatedUser.unregisterRequested = false;
                 updatedUser.confirmed = false;
+                if(updatedUser.services==null){
+                    updatedUser.services=0;
+                }
+                if(updatedUser.credits==null){
+                    updatedUser.credits=0L;
+                }
+                if(updatedUser.autologin==null){
+                    updatedUser.autologin=false;
+                }
                 Token token = authLogic.createPermanentToken(updatedUser, user.uid, 24 * 60, TokenType.CONFIRM, "");
                 updatedUser.confirmString = token.getToken();
                 userDao.addUser(updatedUser);
@@ -673,8 +685,8 @@ public class UserLogic {
         return changedUser;
     }
 
-    private int getAcceptedType(User authorizunUser, int requestedType) {
-        if (authorizunUser == null) {
+    private int getAcceptedType(User authorizunUser, Integer requestedType) {
+        if (authorizunUser == null || requestedType == null) {
             return User.FREE;
         }
         if (isSystemAdmin(authorizunUser)) {

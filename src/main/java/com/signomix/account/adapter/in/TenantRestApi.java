@@ -39,8 +39,33 @@ public class TenantRestApi {
     @Context
     UriInfo uriInfo;
 
+
     /**
-     * Get tenant.
+     * Get tenant by id.
+     * 
+     * @param token
+     * @param id
+     * @return
+     */
+    @GET
+    @Path("/{id}")
+    public Response getTenantById(@HeaderParam("Authentication") String token, @PathParam("id") Integer id) {
+        User user = authPort.getUser(token);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        Tenant tenant = null;
+        try{
+            tenant = tenantPort.getTenantById(user, id);
+        }catch(Exception e){
+            e.printStackTrace();
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        return Response.ok().entity(tenant).build();
+    }
+
+    /**
+     * Get tenant by root.
      * 
      * @param token
      * @param organization

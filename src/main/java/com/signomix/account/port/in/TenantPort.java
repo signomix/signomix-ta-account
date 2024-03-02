@@ -14,6 +14,10 @@ public class TenantPort {
     @Inject
     TenantLogic tenantLogic;
     
+    public Tenant getTenantById(User user, Integer tenantId) throws IotDatabaseException{
+        return tenantLogic.getTenantById(user, tenantId);
+    }
+    
     public Tenant getTenantByRoot(User user, Long organizationId, String root) throws IotDatabaseException{
         return tenantLogic.getTenantByRoot(user, organizationId, root);
     }
