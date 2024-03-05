@@ -7,6 +7,7 @@ import com.signomix.account.port.in.TenantPort;
 import com.signomix.account.port.in.UserPort;
 import com.signomix.common.Tenant;
 import com.signomix.common.User;
+import com.signomix.common.db.IotDatabaseException;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.DELETE;
@@ -39,6 +40,29 @@ public class TenantRestApi {
     @Context
     UriInfo uriInfo;
 
+
+    /**
+     * Get organization tenants.
+     * @param token
+     * @param id
+     * @return
+     */
+    @GET
+    public Response getTenants(@HeaderParam("Authentication") String token, 
+    @QueryParam("organization") Long organizationId, 
+    @QueryParam("limit") int limit, 
+    @QueryParam("offset") int offset) {
+        User user = authPort.getUser(token);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        try {
+            return Response.ok().entity(tenantPort.getTenants(user, organizationId, limit, offset)).build();
+        } catch (IotDatabaseException e) {
+            e.printStackTrace();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 
     /**
      * Get tenant by id.

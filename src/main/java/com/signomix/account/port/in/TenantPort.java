@@ -1,5 +1,7 @@
 package com.signomix.account.port.in;
 
+import java.util.List;
+
 import com.signomix.account.domain.TenantLogic;
 import com.signomix.common.Tenant;
 import com.signomix.common.User;
@@ -13,6 +15,10 @@ public class TenantPort {
 
     @Inject
     TenantLogic tenantLogic;
+
+    public List<Tenant> getTenants(User user, Long organizationId, int limit, int offset) throws IotDatabaseException{
+        return tenantLogic.getTenants(user, organizationId, limit, offset);
+    }
     
     public Tenant getTenantById(User user, Integer tenantId) throws IotDatabaseException{
         return tenantLogic.getTenantById(user, tenantId);

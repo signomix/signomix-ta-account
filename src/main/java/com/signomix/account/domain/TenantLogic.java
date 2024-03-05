@@ -38,6 +38,14 @@ public class TenantLogic {
         organiaztionDao.setDatasource(tsDs);
     }
 
+    public List<Tenant> getTenants(User user, Long organizationId, int limit, int offset) throws IotDatabaseException{
+        if(user.organization.longValue()!=organizationId.longValue()){
+            logger.error("User "+user.uid+" organization=="+user.organization+" tried to access organization "+organizationId);
+            throw new IotDatabaseException(IotDatabaseException.UNKNOWN, "Not available" );
+        }
+        return organiaztionDao.getTenants(organizationId, limit, offset);
+    }
+
     public Tenant getTenantById(User user, Integer tenantId) throws IotDatabaseException {
         Tenant tenant = organiaztionDao.getTenant(tenantId);
         if(tenant==null){
