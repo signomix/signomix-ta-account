@@ -66,7 +66,7 @@ public class UserRestAdapter {
         }
         try {
             users = userPort.getUsers(authorizingUser, limit, offset);
-        } catch (ServiceException|IotDatabaseException e) {
+        } catch (ServiceException | IotDatabaseException e) {
             e.printStackTrace();
             throw new ServiceException(userDatabaseException);
         }
@@ -101,8 +101,8 @@ public class UserRestAdapter {
         try {
             user = userPort.getUser(authorizingUser, uid);
             user.password = null;
-            //user.sessionToken = token; //TODO: is this necessary?
-            user.sessionToken=null;
+            // user.sessionToken = token; //TODO: is this necessary?
+            user.sessionToken = null;
         } catch (IotDatabaseException e) {
             e.printStackTrace();
             throw new ServiceException(userDatabaseException);
@@ -129,9 +129,12 @@ public class UserRestAdapter {
             e.printStackTrace();
             throw new ServiceException(unauthorizedException);
         }
-/*         if (authorizingUser == null || !authorizingUser.uid.equals(uid) || !authorizingUser.uid.equals(user.uid)) {
-            throw new ServiceException(unauthorizedException);
-        } */
+        /*
+         * if (authorizingUser == null || !authorizingUser.uid.equals(uid) ||
+         * !authorizingUser.uid.equals(user.uid)) {
+         * throw new ServiceException(unauthorizedException);
+         * }
+         */
         try {
             userPort.updateUser(authorizingUser, user);
         } catch (IotDatabaseException e) {
@@ -145,24 +148,30 @@ public class UserRestAdapter {
     public Response createUser(
             @HeaderParam("Authentication") String token, User user) {
         User authorizingUser = null;
+        logger.info("Handling createUser request for uid token: " + user.uid + " " + token);
         try {
             try {
-                // Token tokenObj = authPort.getToken(token);
-                // authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
-                // } catch (IotDatabaseException e) {
-                // logger.error("getUser: "+e.getMessage());
-                // e.printStackTrace();
-                // throw new ServiceException(unauthorizedException);
+                if (token != null && !token.isEmpty()) {
+                    authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
+                }
+            } catch (IotDatabaseException e) {
+                logger.error("getUser: " + e.getMessage());
+                e.printStackTrace();
+                throw new ServiceException(unauthorizedException);
             } catch (Exception e) {
                 logger.error("getUser: " + e.getMessage());
                 e.printStackTrace();
                 throw new ServiceException(unauthorizedException);
             }
+            User userToCheck = userPort.checkUser(user.uid);
+            if (userToCheck != null) {
+                return Response.status(Response.Status.CONFLICT).build();
+            }
             try {
                 userPort.createUser(authorizingUser, user);
             } catch (IotDatabaseException e) {
                 e.printStackTrace();
-                throw new ServiceException(userDatabaseException);
+                return Response.status(Response.Status.BAD_REQUEST).build();
             }
             return Response.ok().build();
         } catch (Exception ex) {

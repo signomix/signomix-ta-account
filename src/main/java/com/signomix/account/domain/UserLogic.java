@@ -195,8 +195,8 @@ public class UserLogic {
     }
 
     private void checkRightsToModify(User authorizingUser, User user) {
-        //Admin hierarchy:
-        //System admin (1) > Managing admin (8) > admin /tenant admin (9)) > User
+        // Admin hierarchy:
+        // System admin (1) > Managing admin (8) > admin /tenant admin (9)) > User
         if (authorizingUser.uid.equalsIgnoreCase(user.uid)) {
             return;
         }
@@ -206,13 +206,12 @@ public class UserLogic {
             throw new ServiceException(userNotAuthorizedException);
         }
 
-
-        // Tenant admin can modify all users from 
+        // Tenant admin can modify all users from
         if (isTenantAdmin(authorizingUser, user.organization, user.getPathRoot())) {
             return;
         }
 
-        //Managing admin can modify all users from his organization
+        // Managing admin can modify all users from his organization
         if (isManagingAdmin(authorizingUser, user.organization)) {
             return;
         }
@@ -220,7 +219,7 @@ public class UserLogic {
     }
 
     public void saveUser(User authorizingUser, User user, boolean newUser) throws IotDatabaseException {
-        try {
+        //try {
             if (!newUser) {
                 logger.info("updateUser: " + user.uid);
             } else {
@@ -233,8 +232,8 @@ public class UserLogic {
                     throw new ServiceException("User not found");
                 }
             }
-            if(user.organization==null){
-                user.organization=defaultOrganizationId;
+            if (user.organization == null) {
+                user.organization = defaultOrganizationId;
             }
             // user can be updated or created only by himself
             // or by system admin or organization admin or organization tenant admin
@@ -271,10 +270,21 @@ public class UserLogic {
             if (isSystemAdmin(authorizingUser)) {
                 if (user.organization != null)
                     updatedUser.organization = user.organization;
+                if (user.tenant != null)
+                    updatedUser.tenant = user.tenant;
+                if (user.path != null)
+                    updatedUser.path = user.path;
                 if (user.credits != null)
                     updatedUser.credits = user.credits;
                 if (user.services != null)
                     updatedUser.services = user.services;
+            } else if (isManagingAdmin(authorizingUser, user.organization)) {
+                if (user.organization != null)
+                    updatedUser.organization = authorizingUser.organization;
+                if (user.tenant != null)
+                    updatedUser.tenant = user.tenant;
+                if (user.path != null)
+                    updatedUser.path = user.path;
             } else {
                 if (authorizingUser != null) {
                     updatedUser.organization = authorizingUser.organization;
@@ -325,14 +335,14 @@ public class UserLogic {
                 updatedUser.password = HashMaker.md5Java(user.password);
                 updatedUser.unregisterRequested = false;
                 updatedUser.confirmed = false;
-                if(updatedUser.services==null){
-                    updatedUser.services=0;
+                if (updatedUser.services == null) {
+                    updatedUser.services = 0;
                 }
-                if(updatedUser.credits==null){
-                    updatedUser.credits=0L;
+                if (updatedUser.credits == null) {
+                    updatedUser.credits = 0L;
                 }
-                if(updatedUser.autologin==null){
-                    updatedUser.autologin=false;
+                if (updatedUser.autologin == null) {
+                    updatedUser.autologin = false;
                 }
                 Token token = authLogic.createPermanentToken(updatedUser, user.uid, 24 * 60, TokenType.CONFIRM, "");
                 updatedUser.confirmString = token.getToken();
@@ -348,9 +358,9 @@ public class UserLogic {
                 userDao.updateUser(updatedUser);
                 sendUserEvent("updated", authorizingUser, updatedUser.uid);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        //} catch (Exception e) {
+        //    e.printStackTrace();
+        //}
     }
 
     public void deleteUser(User authorizingUser, String uid) throws IotDatabaseException {
@@ -424,16 +434,17 @@ public class UserLogic {
         }
         logger.info("isSystemAdmin(authorizingUser): " + isSystemAdmin(authorizingUser));
         logger.info("isTenantAdmin(authorizingUser, organizationId): "
-                + isTenantAdmin(authorizingUser, organizationId ));
+                + isTenantAdmin(authorizingUser, organizationId));
         logger.info(
-                "isManagingAdmin(authorizingUser, organizationId): " + isManagingAdmin(authorizingUser, organizationId));
+                "isManagingAdmin(authorizingUser, organizationId): "
+                        + isManagingAdmin(authorizingUser, organizationId));
 
         if (organizationId == null && isSystemAdmin(authorizingUser)) {
             logger.info("getOrganizationUsers1");
             users = (ArrayList) userDao.getUsers(limit, offset);
         }
 
-        if (organizationId != null && tenantId == null) {
+        if (organizationId != null && tenantId == null || tenantId == 0) {
             if (isTenantAdmin(authorizingUser, organizationId) || isSystemAdmin(authorizingUser)
                     || isManagingAdmin(authorizingUser, organizationId)) {
                 logger.info("getOrganizationUsers2");
@@ -443,7 +454,7 @@ public class UserLogic {
             }
         }
 
-        if (organizationId != null && tenantId != null
+        if (organizationId != null && tenantId != null && tenantId > 0
                 && (isSystemAdmin(authorizingUser) || isTenantAdmin(authorizingUser, organizationId)
                         || isManagingAdmin(authorizingUser, organizationId))) {
             logger.info("getOrganizationUsers3");
@@ -459,7 +470,9 @@ public class UserLogic {
         }
         // user can update only himself or if he is system admin or organization admin
         if (!(isTenantAdmin(authorizingUser, actualUser.organization)
-                || isSystemAdmin(authorizingUser) || authorizingUser.uid.equals(uid))) {
+                || isSystemAdmin(authorizingUser) 
+                || isManagingAdmin(authorizingUser, actualUser.organization)
+                || authorizingUser.uid.equals(uid))) {
             throw new ServiceException(userNotAuthorizedException);
         }
         userDao.modifyUserPassword(actualUser.number, HashMaker.md5Java(password));
@@ -504,13 +517,13 @@ public class UserLogic {
     /**
      * Checks if user is tenant admin
      * 
-     * @param user user
+     * @param user           user
      * @param organizationId organization id
-     * @param tenantRoot tenant root path (e.g. /tenant1)
+     * @param tenantRoot     tenant root path (e.g. /tenant1)
      * @return boolean
      */
     public boolean isTenantAdmin(User user, long organizationId, String tenantRoot) {
-        if(tenantRoot == null || tenantRoot.isEmpty()){
+        if (tenantRoot == null || tenantRoot.isEmpty()) {
             return false;
         }
         return user != null && user.organization == organizationId && user.type == User.ADMIN
@@ -518,15 +531,16 @@ public class UserLogic {
     }
 
     /**
-     * Checks if user is tenant admin 
+     * Checks if user is tenant admin
      * 
      * @param user
      * @param organizationId
      * @return
      */
-    public boolean isTenantAdmin(User user, long organizationId){
-        logger.info("isTenantAdmin: "+user.organization+ " "+organizationId+" "+user.tenant+" "+user.getPathRoot());
-        return user.organization==organizationId && user.tenant!=null && !user.getPathRoot().isEmpty();
+    public boolean isTenantAdmin(User user, long organizationId) {
+        logger.info("isTenantAdmin: " + user.organization + " " + organizationId + " " + user.tenant + " "
+                + user.getPathRoot());
+        return user.organization == organizationId && user.tenant != null && !user.getPathRoot().isEmpty();
     }
 
     /**
@@ -543,12 +557,12 @@ public class UserLogic {
         return user != null && user.organization == organizationId;
     }
 
-    public boolean isTenantMember(User user, long organizationId, String tenantRoot){
+    public boolean isTenantMember(User user, long organizationId, String tenantRoot) {
         return user != null && user.organization == organizationId && user.path.startsWith(tenantRoot);
     }
 
-    public boolean isTenantMember(User user, long organizationId, int tenantId){
-        return user!=null && user.organization==organizationId && user.tenant==tenantId;
+    public boolean isTenantMember(User user, long organizationId, int tenantId) {
+        return user != null && user.organization == organizationId && user.tenant == tenantId;
     }
 
     public boolean isManagingAdmin(User user, long organizationId) {

@@ -44,15 +44,11 @@ public class AccountPort {
         userLogic.modifyPassword(newUser);
     }
 
-    public void registerAccount(User newUser) throws IotDatabaseException{
-        // accountLogic.registerAccount(newUser);
-        //userLogic.createUser(null, newUser);
+    public void registerAccount(User newUser) throws IotDatabaseException {
         userLogic.saveUser(null, newUser, true);
     }
 
-    public void registerAccount(User user, User newUser) throws IotDatabaseException{
-        // accountLogic.registerAccount(user, newUser);
-        //userLogic.createUser(user, newUser);
+    public void registerAccount(User user, User newUser) throws IotDatabaseException {
         userLogic.saveUser(user, newUser, true);
     }
 
@@ -61,7 +57,6 @@ public class AccountPort {
     }
 
     public void requestRemoveAccount(User user, String uid) {
-        // accountLogic.requestRemoveAccount(user, uid);
         userLogic.requestRemoveAccount(user);
     }
 
@@ -70,7 +65,6 @@ public class AccountPort {
     }
 
     public void changePassword(User user, String uid, String newPassword) throws IotDatabaseException {
-        // accountLogic.changePassword(user, uid, newPassword);
         userLogic.modifyUserPassword(user, uid, newPassword);
     }
 
@@ -78,14 +72,8 @@ public class AccountPort {
         userLogic.resetPassword(uid, email);
     }
 
-    public void modifyAccount(User user, String uid, User newUser) {
-        // accountLogic.modifyAccount(user, uid, newUser);
-        try {
-            userLogic.saveUser(user, newUser, false);
-        } catch (IotDatabaseException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+    public void modifyAccount(User user, String uid, User newUser) throws IotDatabaseException {
+        userLogic.saveUser(user, newUser, false);
     }
 
 }
