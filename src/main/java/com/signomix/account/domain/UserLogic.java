@@ -14,6 +14,8 @@ import com.signomix.common.Token;
 import com.signomix.common.TokenType;
 import com.signomix.common.User;
 import com.signomix.common.db.IotDatabaseException;
+import com.signomix.common.db.OrganizationDao;
+import com.signomix.common.db.OrganizationDaoIface;
 import com.signomix.common.db.UserDao;
 import com.signomix.common.db.UserDaoIface;
 import com.signomix.common.gui.Dashboard;
@@ -42,6 +44,7 @@ public class UserLogic {
     AgroalDataSource userDataSource;
 
     UserDaoIface userDao;
+    OrganizationDaoIface organizationDao;
 
     @ConfigProperty(name = "signomix.exception.api.unauthorized")
     String userNotAuthorizedException;
@@ -65,12 +68,15 @@ public class UserLogic {
         if ("h2".equalsIgnoreCase(databaseType)) {
             userDao = new UserDao();
             userDao.setDatasource(userDataSource);
+            organizationDao = new OrganizationDao();
             // iotDao = new IotDatabaseDao();
             // iotDao.setDatasource(deviceDataSource);
             defaultOrganizationId = 0;
         } else if ("postgresql".equalsIgnoreCase(databaseType)) {
             userDao = new com.signomix.common.tsdb.UserDao();
             userDao.setDatasource(userDataSource);
+            organizationDao = new com.signomix.common.tsdb.OrganizationDao();
+            organizationDao.setDatasource(userDataSource);
             // iotDao = new com.signomix.common.tsdb.IotDatabaseDao();
             // iotDao.setDatasource(tsDs);
             defaultOrganizationId = 1;
@@ -219,148 +225,183 @@ public class UserLogic {
     }
 
     public void saveUser(User authorizingUser, User user, boolean newUser) throws IotDatabaseException {
-        //try {
+        // try {
+        if (!newUser) {
+            logger.info("updateUser: " + user.uid);
+        } else {
+            logger.info("createUser: " + user.uid+ " " + user.path);
+        }
+        User actualUser = null;
+        if (!newUser) {
+            actualUser = userDao.getUser(user.uid);
+            if (actualUser == null) {
+                throw new ServiceException("User not found");
+            }
+        }
+        if (user.organization == null) {
+            user.organization = defaultOrganizationId;
+        }
+        // user can be updated or created only by himself
+        // or by system admin or organization admin or organization tenant admin
+
+        // checkRightsToModify(authorizingUser, actualUser);
+        if (authorizingUser != null) {
             if (!newUser) {
-                logger.info("updateUser: " + user.uid);
-            } else {
-                logger.info("createUser: " + user.uid);
-            }
-            User actualUser = null;
-            if (!newUser) {
-                actualUser = userDao.getUser(user.uid);
-                if (actualUser == null) {
-                    throw new ServiceException("User not found");
-                }
-            }
-            if (user.organization == null) {
-                user.organization = defaultOrganizationId;
-            }
-            // user can be updated or created only by himself
-            // or by system admin or organization admin or organization tenant admin
-            if (authorizingUser != null) {
                 if (!(authorizingUser.uid.equalsIgnoreCase(user.uid)
                         || isSystemAdmin(authorizingUser)
                         || isTenantAdmin(authorizingUser, actualUser.organization, actualUser.getPathRoot())
                         || isManagingAdmin(authorizingUser, actualUser.organization))) {
                     throw new ServiceException(userNotAuthorizedException);
                 }
-            }
-            // user modification cannot be done anonymously
-            if (authorizingUser == null && !newUser) {
-                throw new ServiceException(userNotAuthorizedException);
-            }
-
-            User updatedUser = null;
-            if (newUser) {
-                updatedUser = User.clone(user);
-                updatedUser = User.clone(user);
-                updatedUser.number = null;
-                updatedUser.organization = defaultOrganizationId;
-                updatedUser.authStatus = User.IS_CREATED;
             } else {
-                updatedUser = User.clone(actualUser);
+                if (!(isSystemAdmin(authorizingUser)
+                        || isTenantAdmin(authorizingUser, user.organization, user.getPathRoot())
+                        || isManagingAdmin(authorizingUser, user.organization))) {
+                    throw new ServiceException(userNotAuthorizedException);
+                }
             }
+        }
 
-            updatedUser.type = getAcceptedType(authorizingUser, user.type);
+        // user modification cannot be done anonymously
+        if (authorizingUser == null && !newUser) {
+            throw new ServiceException(userNotAuthorizedException);
+        }
 
-            if (user.password != null) {
-                updatedUser.password = HashMaker.md5Java(user.password);
-            }
+        User updatedUser = null;
+        if (newUser) {
+            updatedUser = User.clone(user);
+            updatedUser = User.clone(user);
+            updatedUser.number = null;
+            updatedUser.organization = defaultOrganizationId;
+            updatedUser.authStatus = User.IS_CREATED;
+        } else {
+            updatedUser = User.clone(actualUser);
+        }
 
-            if (isSystemAdmin(authorizingUser)) {
-                if (user.organization != null)
-                    updatedUser.organization = user.organization;
-                if (user.tenant != null)
-                    updatedUser.tenant = user.tenant;
-                if (user.path != null)
-                    updatedUser.path = user.path;
-                if (user.credits != null)
-                    updatedUser.credits = user.credits;
-                if (user.services != null)
-                    updatedUser.services = user.services;
-            } else if (isManagingAdmin(authorizingUser, user.organization)) {
-                if (user.organization != null)
-                    updatedUser.organization = authorizingUser.organization;
-                if (user.tenant != null)
-                    updatedUser.tenant = user.tenant;
-                if (user.path != null)
-                    updatedUser.path = user.path;
+        updatedUser.type = getAcceptedType(authorizingUser, user.type);
+
+        if (user.password != null) {
+            updatedUser.password = HashMaker.md5Java(user.password);
+        }
+
+        if (isSystemAdmin(authorizingUser)) {
+            //logger.info("SYSTEM ADMIN");
+            if (user.organization != null)
+                updatedUser.organization = user.organization;
+            if (user.tenant != null)
+                updatedUser.tenant = user.tenant;
+            if (user.path != null)
+                updatedUser.path = user.path;
+            if (user.credits != null)
+                updatedUser.credits = user.credits;
+            if (user.services != null)
+                updatedUser.services = user.services;
+        } else if (isManagingAdmin(authorizingUser, user.organization)) {
+            //logger.info("MANAGING ADMIN");
+            updatedUser.organization = authorizingUser.organization;
+            if (user.tenant != null)
+                updatedUser.tenant = user.tenant;
+            if (user.path != null)
+                updatedUser.path = user.path;
+        } else if (isTenantAdmin(authorizingUser, user.organization, user.getPathRoot())) {
+            //logger.info("TENANT ADMIN");
+            updatedUser.organization = authorizingUser.organization;
+            updatedUser.tenant = authorizingUser.tenant;
+            if (user.path == null) {
+                updatedUser.path = authorizingUser.getPathRoot();
             } else {
-                if (authorizingUser != null) {
-                    updatedUser.organization = authorizingUser.organization;
-                }
-            }
-
-            if (isSystemAdmin(authorizingUser)
-                    || isTenantAdmin(authorizingUser, user.organization, user.getPathRoot())
-                    || isManagingAdmin(authorizingUser, user.organization)) {
-                if (user.unregisterRequested != null)
-                    updatedUser.unregisterRequested = user.unregisterRequested;
-                if (user.authStatus != null)
-                    updatedUser.authStatus = user.authStatus;
-                if (user.confirmString != null)
-                    updatedUser.confirmString = user.confirmString;
-                if (user.confirmed != null)
-                    updatedUser.confirmed = user.confirmed;
-                if (user.role != null)
-                    updatedUser.role = user.role;
-                if (user.path != null)
+                if (user.path.startsWith(authorizingUser.getPathRoot())) {
                     updatedUser.path = user.path;
-                if (user.preferredLanguage != null)
-                    updatedUser.preferredLanguage = user.preferredLanguage;
-                if (user.autologin != null)
-                    updatedUser.autologin = user.autologin;
-                if (user.name != null)
-                    updatedUser.name = user.name;
-                if (user.surname != null)
-                    updatedUser.surname = user.surname;
-                if (user.email != null)
-                    updatedUser.email = user.email;
-                if (user.phonePrefix != null)
-                    updatedUser.phonePrefix = user.phonePrefix;
-                if (user.phone != null)
-                    updatedUser.phone = user.phone;
-                if (user.generalNotificationChannel != null)
-                    updatedUser.generalNotificationChannel = user.generalNotificationChannel;
-                if (user.infoNotificationChannel != null)
-                    updatedUser.infoNotificationChannel = user.infoNotificationChannel;
-                if (user.warningNotificationChannel != null)
-                    updatedUser.warningNotificationChannel = user.warningNotificationChannel;
-                if (user.alertNotificationChannel != null)
-                    updatedUser.alertNotificationChannel = user.alertNotificationChannel;
-            }
-
-            if (newUser) {
-                updatedUser.createdAt = System.currentTimeMillis();
-                updatedUser.password = HashMaker.md5Java(user.password);
-                updatedUser.unregisterRequested = false;
-                updatedUser.confirmed = false;
-                if (updatedUser.services == null) {
-                    updatedUser.services = 0;
-                }
-                if (updatedUser.credits == null) {
-                    updatedUser.credits = 0L;
-                }
-                if (updatedUser.autologin == null) {
-                    updatedUser.autologin = false;
-                }
-                Token token = authLogic.createPermanentToken(updatedUser, user.uid, 24 * 60, TokenType.CONFIRM, "");
-                updatedUser.confirmString = token.getToken();
-                userDao.addUser(updatedUser);
-                if (updatedUser.authStatus == User.IS_CREATED) {
-                    sendUserEvent("created", authorizingUser, user.uid);
-                } else if (updatedUser.authStatus == User.IS_ACTIVE) {
-                    sendUserEvent("created_and_activated", authorizingUser, user.uid);
                 } else {
-                    sendUserEvent("event", authorizingUser, user.uid);
+                    updatedUser.path = authorizingUser.getPathRoot();
                 }
-            } else {
-                userDao.updateUser(updatedUser);
-                sendUserEvent("updated", authorizingUser, updatedUser.uid);
             }
-        //} catch (Exception e) {
-        //    e.printStackTrace();
-        //}
+        } else {
+            if (authorizingUser != null) {
+                updatedUser.organization = authorizingUser.organization;
+            }
+        }
+
+        if (isSystemAdmin(authorizingUser)
+                || isTenantAdmin(authorizingUser, user.organization, user.getPathRoot())
+                || isManagingAdmin(authorizingUser, user.organization)) {
+            if (user.unregisterRequested != null)
+                updatedUser.unregisterRequested = user.unregisterRequested;
+            if (user.authStatus != null)
+                updatedUser.authStatus = user.authStatus;
+            if (user.confirmString != null)
+                updatedUser.confirmString = user.confirmString;
+            if (user.confirmed != null)
+                updatedUser.confirmed = user.confirmed;
+            if (user.role != null)
+                updatedUser.role = user.role;
+            if (user.path != null)
+                updatedUser.path = user.path;
+            if (user.preferredLanguage != null)
+                updatedUser.preferredLanguage = user.preferredLanguage;
+            if (user.autologin != null)
+                updatedUser.autologin = user.autologin;
+            if (user.name != null)
+                updatedUser.name = user.name;
+            if (user.surname != null)
+                updatedUser.surname = user.surname;
+            if (user.email != null)
+                updatedUser.email = user.email;
+            if (user.phonePrefix != null)
+                updatedUser.phonePrefix = user.phonePrefix;
+            if (user.phone != null)
+                updatedUser.phone = user.phone;
+            if (user.generalNotificationChannel != null)
+                updatedUser.generalNotificationChannel = user.generalNotificationChannel;
+            if (user.infoNotificationChannel != null)
+                updatedUser.infoNotificationChannel = user.infoNotificationChannel;
+            if (user.warningNotificationChannel != null)
+                updatedUser.warningNotificationChannel = user.warningNotificationChannel;
+            if (user.alertNotificationChannel != null)
+                updatedUser.alertNotificationChannel = user.alertNotificationChannel;
+        }
+
+        if (newUser) {
+            updatedUser.createdAt = System.currentTimeMillis();
+            updatedUser.password = HashMaker.md5Java(user.password);
+            updatedUser.unregisterRequested = false;
+            updatedUser.confirmed = false;
+            if (updatedUser.services == null) {
+                updatedUser.services = 0;
+            }
+            if (updatedUser.credits == null) {
+                updatedUser.credits = 0L;
+            }
+            if (updatedUser.autologin == null) {
+                updatedUser.autologin = false;
+            }
+            Token token = authLogic.createPermanentToken(updatedUser, user.uid, 24 * 60, TokenType.CONFIRM, "");
+            updatedUser.confirmString = token.getToken();
+            Integer userNumber = userDao.addUser(updatedUser);
+            if (updatedUser.tenant != null && updatedUser.tenant > 0) {
+                if (userNumber > 0) {
+                    //logger.info("addTenantUser with path: " + updatedUser.path);
+                    organizationDao.addTenantUser(updatedUser.organization, updatedUser.tenant, userNumber.longValue(),
+                            updatedUser.path);
+                }else{
+                    // it should not happen
+                    throw new ServiceException("User not added");
+                }
+            }
+            if (updatedUser.authStatus == User.IS_CREATED) {
+                sendUserEvent("created", authorizingUser, user.uid);
+            } else if (updatedUser.authStatus == User.IS_ACTIVE) {
+                sendUserEvent("created_and_activated", authorizingUser, user.uid);
+            } else {
+                sendUserEvent("event", authorizingUser, user.uid);
+            }
+        } else {
+            userDao.updateUser(updatedUser);
+            sendUserEvent("updated", authorizingUser, updatedUser.uid);
+        }
+        // } catch (Exception e) {
+        // e.printStackTrace();
+        // }
     }
 
     public void deleteUser(User authorizingUser, String uid) throws IotDatabaseException {
@@ -470,7 +511,7 @@ public class UserLogic {
         }
         // user can update only himself or if he is system admin or organization admin
         if (!(isTenantAdmin(authorizingUser, actualUser.organization)
-                || isSystemAdmin(authorizingUser) 
+                || isSystemAdmin(authorizingUser)
                 || isManagingAdmin(authorizingUser, actualUser.organization)
                 || authorizingUser.uid.equals(uid))) {
             throw new ServiceException(userNotAuthorizedException);
