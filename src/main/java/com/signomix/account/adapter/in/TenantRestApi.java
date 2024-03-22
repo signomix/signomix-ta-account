@@ -129,7 +129,8 @@ public class TenantRestApi {
         try {
             tenantPort.addTenant(user, tenant);
         } catch (Exception e) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
+            e.printStackTrace();
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         }
         return Response.ok().build();
     }

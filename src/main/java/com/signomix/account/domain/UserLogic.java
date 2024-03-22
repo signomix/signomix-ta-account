@@ -381,7 +381,7 @@ public class UserLogic {
             if (updatedUser.tenant != null && updatedUser.tenant > 0) {
                 if (userNumber > 0) {
                     //logger.info("addTenantUser with path: " + updatedUser.path);
-                    organizationDao.addTenantUser(updatedUser.organization, updatedUser.tenant, userNumber.longValue(),
+                    userDao.addTenantUser(updatedUser.organization, updatedUser.tenant, userNumber.longValue(),
                             updatedUser.path);
                 }else{
                     // it should not happen
@@ -397,6 +397,9 @@ public class UserLogic {
             }
         } else {
             userDao.updateUser(updatedUser);
+            if (updatedUser.tenant != null && updatedUser.tenant > 0) {
+                userDao.updateTenantUser(updatedUser);
+            }
             sendUserEvent("updated", authorizingUser, updatedUser.uid);
         }
         // } catch (Exception e) {

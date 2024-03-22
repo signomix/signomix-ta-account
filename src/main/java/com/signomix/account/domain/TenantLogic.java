@@ -69,7 +69,7 @@ public class TenantLogic {
         if(user.organization!=tenant.organizationId){
             throw new IotDatabaseException(IotDatabaseException.UNKNOWN, "Not available" );
         }
-        if(user.type!=User.MANAGING_ADMIN){
+        if(!(user.type==User.MANAGING_ADMIN || user.type==User.OWNER)){
             throw new IotDatabaseException(IotDatabaseException.UNKNOWN, "Not available" );
         }
         organiaztionDao.addTenant(tenant.organizationId, tenant.name, tenant.root, tenant.menuDefinition);
