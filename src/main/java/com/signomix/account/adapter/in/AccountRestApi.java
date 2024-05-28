@@ -118,6 +118,7 @@ public class AccountRestApi {
         try {
             accountPort.registerAccount(newUser);
         } catch (Exception e) {
+            e.printStackTrace();
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
         return Response.ok().build();
