@@ -48,6 +48,8 @@ public class UserLogic {
 
     @ConfigProperty(name = "signomix.exception.api.unauthorized")
     String userNotAuthorizedException;
+    @ConfigProperty(name = "signomix.exception.api.required_password")
+    String passwordNotSetException;
 
     @ConfigProperty(name = "signomix.database.type")
     String databaseType;
@@ -229,7 +231,7 @@ public class UserLogic {
         if (!newUser) {
             logger.info("updateUser: " + user.uid);
         } else {
-            logger.info("createUser: " + user.uid+ " " + user.path);
+            logger.info("createUser: " + user.uid + " " + user.path);
         }
         User actualUser = null;
         if (!newUser) {
@@ -241,9 +243,9 @@ public class UserLogic {
         if (user.organization == null) {
             user.organization = defaultOrganizationId;
         }
-        // user can be updated or created only by himself
+        // User can be updated or created only by himself
         // or by system admin or organization admin or organization tenant admin
-
+        // Otherwise request is rejected.
         // checkRightsToModify(authorizingUser, actualUser);
         if (authorizingUser != null) {
             if (!newUser) {
@@ -270,22 +272,35 @@ public class UserLogic {
         User updatedUser = null;
         if (newUser) {
             updatedUser = User.clone(user);
-            updatedUser = User.clone(user);
             updatedUser.number = null;
             updatedUser.organization = defaultOrganizationId;
             updatedUser.authStatus = User.IS_CREATED;
+            if (user.password != null) {
+                updatedUser.password = HashMaker.md5Java(user.password);
+            }else{
+                // password is required for new user
+                throw new ServiceException(passwordNotSetException);
+            }
         } else {
             updatedUser = User.clone(actualUser);
+            if (user.password != null) {
+                updatedUser.password = HashMaker.md5Java(user.password);
+            }
         }
 
         updatedUser.type = getAcceptedType(authorizingUser, user.type);
 
-        if (user.password != null) {
-            updatedUser.password = HashMaker.md5Java(user.password);
-        }
-
         if (isSystemAdmin(authorizingUser)) {
-            //logger.info("SYSTEM ADMIN");
+            // logger.info("SYSTEM ADMIN");
+            // restricted fields:
+            // organization
+            // tenant
+            // path
+            // credits
+            // services
+            // role
+            // confirmed
+            // authStatus
             if (user.organization != null)
                 updatedUser.organization = user.organization;
             if (user.tenant != null)
@@ -296,15 +311,38 @@ public class UserLogic {
                 updatedUser.credits = user.credits;
             if (user.services != null)
                 updatedUser.services = user.services;
+            if (user.role != null)
+                updatedUser.role = user.role;
+            if (user.confirmed != null)
+                updatedUser.confirmed = user.confirmed;
+            if (user.authStatus != null)
+                updatedUser.authStatus = user.authStatus;
         } else if (isManagingAdmin(authorizingUser, user.organization)) {
-            //logger.info("MANAGING ADMIN");
+            // logger.info("MANAGING ADMIN");
+            // restricted fields:
+            // tenant
+            // path
+            // role
+            // confirmed
+            // authStatus
             updatedUser.organization = authorizingUser.organization;
             if (user.tenant != null)
                 updatedUser.tenant = user.tenant;
             if (user.path != null)
                 updatedUser.path = user.path;
+            if (user.role != null)
+                updatedUser.role = user.role;
+            if (user.confirmed != null)
+                updatedUser.confirmed = user.confirmed;
+            if (user.authStatus != null)
+                updatedUser.authStatus = user.authStatus;
         } else if (isTenantAdmin(authorizingUser, user.organization, user.getPathRoot())) {
-            //logger.info("TENANT ADMIN");
+            // logger.info("TENANT ADMIN");
+            // restricted fields:
+            // path
+            // role
+            // confirmed
+            // authStatus
             updatedUser.organization = authorizingUser.organization;
             updatedUser.tenant = authorizingUser.tenant;
             if (user.path == null) {
@@ -316,27 +354,45 @@ public class UserLogic {
                     updatedUser.path = authorizingUser.getPathRoot();
                 }
             }
-        } else {
-            if (authorizingUser != null) {
-                updatedUser.organization = authorizingUser.organization;
-            }
-        }
-
-        if (isSystemAdmin(authorizingUser)
-                || isTenantAdmin(authorizingUser, user.organization, user.getPathRoot())
-                || isManagingAdmin(authorizingUser, user.organization)) {
-            if (user.unregisterRequested != null)
-                updatedUser.unregisterRequested = user.unregisterRequested;
-            if (user.authStatus != null)
-                updatedUser.authStatus = user.authStatus;
-            if (user.confirmString != null)
-                updatedUser.confirmString = user.confirmString;
-            if (user.confirmed != null)
-                updatedUser.confirmed = user.confirmed;
             if (user.role != null)
                 updatedUser.role = user.role;
-            if (user.path != null)
-                updatedUser.path = user.path;
+            if (user.confirmed != null)
+                updatedUser.confirmed = user.confirmed;
+            if (user.authStatus != null)
+                updatedUser.authStatus = user.authStatus;
+        } else {
+            updatedUser.confirmed = false;
+            // not needed
+            /*
+             * if (authorizingUser != null) {
+             * updatedUser.organization = authorizingUser.organization;
+             * }
+             */
+        }
+
+        // Any authorized user can modify the following fields:
+
+        //if (isSystemAdmin(authorizingUser)
+        //        || isTenantAdmin(authorizingUser, user.organization, user.getPathRoot())
+        //        || isManagingAdmin(authorizingUser, user.organization)) {
+            if (user.unregisterRequested != null)
+                updatedUser.unregisterRequested = user.unregisterRequested;
+            if (user.confirmString != null)
+                updatedUser.confirmString = user.confirmString;
+            /*
+             * if (user.confirmed != null)
+             * updatedUser.confirmed = user.confirmed;
+             * if (user.authStatus != null)
+             * updatedUser.authStatus = user.authStatus;
+             */
+            /*
+             * if (user.role != null)
+             * updatedUser.role = user.role;
+             */
+            /*
+             * if (user.path != null)
+             * updatedUser.path = user.path;
+             */
             if (user.preferredLanguage != null)
                 updatedUser.preferredLanguage = user.preferredLanguage;
             if (user.autologin != null)
@@ -359,31 +415,36 @@ public class UserLogic {
                 updatedUser.warningNotificationChannel = user.warningNotificationChannel;
             if (user.alertNotificationChannel != null)
                 updatedUser.alertNotificationChannel = user.alertNotificationChannel;
-        }
+        //}
 
+        logger.info("user G-CHANNEL: " + user.generalNotificationChannel);
+        logger.info("updatedUser G-CHANNEL: " + updatedUser.generalNotificationChannel);
+
+        // finally: save user
         if (newUser) {
             updatedUser.createdAt = System.currentTimeMillis();
-            updatedUser.password = HashMaker.md5Java(user.password);
             updatedUser.unregisterRequested = false;
-            updatedUser.confirmed = false;
-            if (updatedUser.services == null) {
-                updatedUser.services = 0;
-            }
-            if (updatedUser.credits == null) {
-                updatedUser.credits = 0L;
-            }
-            if (updatedUser.autologin == null) {
-                updatedUser.autologin = false;
-            }
+            // updatedUser.confirmed = false;
+            /*
+             * if (updatedUser.services == null) {
+             * updatedUser.services = 0;
+             * }
+             * if (updatedUser.credits == null) {
+             * updatedUser.credits = 0L;
+             * }
+             * if (updatedUser.autologin == null) {
+             * updatedUser.autologin = false;
+             * }
+             */
             Token token = authLogic.createPermanentToken(updatedUser, user.uid, 24 * 60, TokenType.CONFIRM, "");
             updatedUser.confirmString = token.getToken();
             Integer userNumber = userDao.addUser(updatedUser);
             if (updatedUser.tenant != null && updatedUser.tenant > 0) {
                 if (userNumber > 0) {
-                    //logger.info("addTenantUser with path: " + updatedUser.path);
+                    // logger.info("addTenantUser with path: " + updatedUser.path);
                     userDao.addTenantUser(updatedUser.organization, updatedUser.tenant, userNumber.longValue(),
                             updatedUser.path);
-                }else{
+                } else {
                     // it should not happen
                     throw new ServiceException("User not added");
                 }
@@ -402,9 +463,7 @@ public class UserLogic {
             }
             sendUserEvent("updated", authorizingUser, updatedUser.uid);
         }
-        // } catch (Exception e) {
-        // e.printStackTrace();
-        // }
+
     }
 
     public void deleteUser(User authorizingUser, String uid) throws IotDatabaseException {
