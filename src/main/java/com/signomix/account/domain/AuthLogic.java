@@ -111,7 +111,7 @@ public class AuthLogic {
         return tokenObj;
     }
 
-    public Token createPermanentToken(User issuer, String uid, long lifetimeMinutes, TokenType tokenType, String payload) {
+     public Token createPermanentToken(User issuer, String uid, long lifetimeMinutes, TokenType tokenType, String payload) {
         Token token = null;
         try {
             token = authDao.createTokenForUser(issuer, uid, lifetimeMinutes, true, tokenType, payload);
@@ -121,33 +121,15 @@ public class AuthLogic {
         return token;
     }
 
-    /*
-     * public User getUser(String uid) {
-     * if(null==uid){
-     * return null;
-     * }
-     * UserServiceClient client;
-     * User completedUser = null;
-     * 
-     * try {
-     * client = RestClientBuilder.newBuilder()
-     * .baseUri(new URI(authHost))
-     * .followRedirects(true)
-     * .build(UserServiceClient.class);
-     * completedUser = client.getUser(uid, appKey);
-     * } catch (URISyntaxException ex) {
-     * LOG.error(ex.getMessage());
-     * // TODO: notyfikacja użytkownika o błędzie
-     * } catch (ProcessingException ex) {
-     * LOG.error(ex.getMessage());
-     * } catch (WebApplicationException ex) {
-     * LOG.error(ex.getMessage());
-     * } catch (Exception ex) {
-     * LOG.error(ex.getMessage());
-     * // TODO: notyfikacja użytkownika o błędzie
-     * }
-     * return completedUser;
-     * }
-     */
+    /*public Token createApiToken(User issuer, long lifetimeMinutes) {
+        Token token = null;
+        try {
+            token = authDao.createApiToken(issuer,lifetimeMinutes);
+        } catch (Exception e) {
+            LOG.error(e.getMessage());
+        }
+        return token;
+    } */
+
 
 }
