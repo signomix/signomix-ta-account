@@ -1,5 +1,6 @@
 package com.signomix.account.domain;
 
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,6 +26,7 @@ import com.signomix.common.iot.DeviceGroup;
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.agroal.DataSource;
 import io.quarkus.runtime.StartupEvent;
+import io.questdb.client.Sender;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
@@ -56,6 +58,9 @@ public class UserLogic {
 
     @ConfigProperty(name = "signomix.mqtt.field.separator")
     String mqttFieldSeparator;
+
+    @ConfigProperty(name = "questdb.client.config")
+    String questDbConfig;
 
     private long defaultOrganizationId = 1;
 
@@ -277,7 +282,7 @@ public class UserLogic {
             updatedUser.authStatus = User.IS_CREATED;
             if (user.password != null) {
                 updatedUser.password = HashMaker.md5Java(user.password);
-            }else{
+            } else {
                 // password is required for new user
                 throw new ServiceException(passwordNotSetException);
             }
@@ -372,50 +377,50 @@ public class UserLogic {
 
         // Any authorized user can modify the following fields:
 
-        //if (isSystemAdmin(authorizingUser)
-        //        || isTenantAdmin(authorizingUser, user.organization, user.getPathRoot())
-        //        || isManagingAdmin(authorizingUser, user.organization)) {
-            if (user.unregisterRequested != null)
-                updatedUser.unregisterRequested = user.unregisterRequested;
-            if (user.confirmString != null)
-                updatedUser.confirmString = user.confirmString;
-            /*
-             * if (user.confirmed != null)
-             * updatedUser.confirmed = user.confirmed;
-             * if (user.authStatus != null)
-             * updatedUser.authStatus = user.authStatus;
-             */
-            /*
-             * if (user.role != null)
-             * updatedUser.role = user.role;
-             */
-            /*
-             * if (user.path != null)
-             * updatedUser.path = user.path;
-             */
-            if (user.preferredLanguage != null)
-                updatedUser.preferredLanguage = user.preferredLanguage;
-            if (user.autologin != null)
-                updatedUser.autologin = user.autologin;
-            if (user.name != null)
-                updatedUser.name = user.name;
-            if (user.surname != null)
-                updatedUser.surname = user.surname;
-            if (user.email != null)
-                updatedUser.email = user.email;
-            if (user.phonePrefix != null)
-                updatedUser.phonePrefix = user.phonePrefix;
-            if (user.phone != null)
-                updatedUser.phone = user.phone;
-            if (user.generalNotificationChannel != null)
-                updatedUser.generalNotificationChannel = user.generalNotificationChannel;
-            if (user.infoNotificationChannel != null)
-                updatedUser.infoNotificationChannel = user.infoNotificationChannel;
-            if (user.warningNotificationChannel != null)
-                updatedUser.warningNotificationChannel = user.warningNotificationChannel;
-            if (user.alertNotificationChannel != null)
-                updatedUser.alertNotificationChannel = user.alertNotificationChannel;
-        //}
+        // if (isSystemAdmin(authorizingUser)
+        // || isTenantAdmin(authorizingUser, user.organization, user.getPathRoot())
+        // || isManagingAdmin(authorizingUser, user.organization)) {
+        if (user.unregisterRequested != null)
+            updatedUser.unregisterRequested = user.unregisterRequested;
+        if (user.confirmString != null)
+            updatedUser.confirmString = user.confirmString;
+        /*
+         * if (user.confirmed != null)
+         * updatedUser.confirmed = user.confirmed;
+         * if (user.authStatus != null)
+         * updatedUser.authStatus = user.authStatus;
+         */
+        /*
+         * if (user.role != null)
+         * updatedUser.role = user.role;
+         */
+        /*
+         * if (user.path != null)
+         * updatedUser.path = user.path;
+         */
+        if (user.preferredLanguage != null)
+            updatedUser.preferredLanguage = user.preferredLanguage;
+        if (user.autologin != null)
+            updatedUser.autologin = user.autologin;
+        if (user.name != null)
+            updatedUser.name = user.name;
+        if (user.surname != null)
+            updatedUser.surname = user.surname;
+        if (user.email != null)
+            updatedUser.email = user.email;
+        if (user.phonePrefix != null)
+            updatedUser.phonePrefix = user.phonePrefix;
+        if (user.phone != null)
+            updatedUser.phone = user.phone;
+        if (user.generalNotificationChannel != null)
+            updatedUser.generalNotificationChannel = user.generalNotificationChannel;
+        if (user.infoNotificationChannel != null)
+            updatedUser.infoNotificationChannel = user.infoNotificationChannel;
+        if (user.warningNotificationChannel != null)
+            updatedUser.warningNotificationChannel = user.warningNotificationChannel;
+        if (user.alertNotificationChannel != null)
+            updatedUser.alertNotificationChannel = user.alertNotificationChannel;
+        // }
 
         logger.info("user G-CHANNEL: " + user.generalNotificationChannel);
         logger.info("updatedUser G-CHANNEL: " + updatedUser.generalNotificationChannel);
@@ -456,6 +461,9 @@ public class UserLogic {
             } else {
                 sendUserEvent("event", authorizingUser, user.uid);
             }
+            // register in log db
+            updatedUser.number = Long.valueOf(userNumber);
+            saveUserRegistration(updatedUser);
         } else {
             userDao.updateUser(updatedUser);
             if (updatedUser.tenant != null && updatedUser.tenant > 0) {
@@ -829,6 +837,23 @@ public class UserLogic {
             }
         } else {
             return User.FREE;
+        }
+    }
+
+    /**
+     * Save user registration event in log database
+     * 
+     * @param user
+     */
+    private void saveUserRegistration(User user) {
+        try (
+                Sender sender = Sender.fromConfig(questDbConfig)) {
+            sender.table("users")
+                    .symbol("login", user.uid)
+                    .longColumn("user_number", user.number)
+                    .at(System.currentTimeMillis(), ChronoUnit.MILLIS);
+        } catch (Exception e) {
+            logger.error("saveLoginEvent: " + e.getMessage());
         }
     }
 }
