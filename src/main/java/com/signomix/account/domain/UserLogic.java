@@ -847,7 +847,7 @@ public class UserLogic {
      */
     private void saveUserRegistration(User user) {
         try (
-                Sender sender = Sender.fromConfig(questDbConfig)) {
+            Sender sender = Sender.fromConfig(questDbConfig)) {
             sender.table("users")
                     .symbol("login", user.uid)
                     .longColumn("user_number", user.number)
