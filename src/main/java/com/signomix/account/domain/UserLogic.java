@@ -492,29 +492,37 @@ public class UserLogic {
         return userDao.getUser(uid);
     }
 
-    public List<User> getUsers(User authorizingUser, Integer limit, Integer offset) throws IotDatabaseException {
+    public List<User> getUsers(User authorizingUser, Integer limit, Integer offset, String search) throws IotDatabaseException {
         if (authorizingUser == null) {
             throw new ServiceException(userNotAuthorizedException);
         }
+        String[] searchParams={"",""};
+        if(search!=null && search.indexOf(":")>0){
+            searchParams=search.split(":");
+        }
         if (isSystemAdmin(authorizingUser)) {
-            return userDao.getUsers(limit, offset);
+            return userDao.getUsers(limit, offset, searchParams[0], searchParams[1]);
         } else if (isTenantAdmin(authorizingUser, authorizingUser.organization, authorizingUser.getPathRoot())) {
-            return userDao.getOrganizationUsers(authorizingUser.organization, limit, offset);
+            return userDao.getOrganizationUsers(authorizingUser.organization, limit, offset, searchParams[0], searchParams[1]);
         } else {
             throw new ServiceException(userNotAuthorizedException);
         }
     }
 
     @Deprecated
-    public List<User> getUsers(User authorizingUser, Long organizationId, Integer limit, Integer offset)
+    public List<User> getUsers(User authorizingUser, Long organizationId, Integer limit, Integer offset, String search)
             throws IotDatabaseException {
         if (authorizingUser == null) {
             throw new ServiceException(userNotAuthorizedException);
         }
+        String[] searchParams={"",""};
+        if(search!=null && search.indexOf(":")>0){
+            searchParams=search.split(":");
+        }
         if (isSystemAdmin(authorizingUser)) {
-            return userDao.getUsers(limit, offset);
+            return userDao.getUsers(limit, offset, searchParams[0], searchParams[1]);
         } else if (isTenantAdmin(authorizingUser, authorizingUser.organization, authorizingUser.getPathRoot())) {
-            return userDao.getOrganizationUsers(authorizingUser.organization, limit, offset);
+            return userDao.getOrganizationUsers(authorizingUser.organization, limit, offset, searchParams[0], searchParams[1]);
         } else {
             throw new ServiceException(userNotAuthorizedException);
         }
@@ -527,21 +535,9 @@ public class UserLogic {
         if (authorizingUser == null) {
             throw new ServiceException(userNotAuthorizedException);
         }
-        String searchArray[];
-        if (search == null) {
-            search = "";
-        }
-        searchArray = search.split(":");
-        switch (searchArray[0]) {
-            case "name":
-                search = searchArray[1];
-                break;
-            case "login":
-                search = searchArray[1];
-                break;
-            default:
-                search = "";
-                break;
+        String[] searchParams={"",""};
+        if(search!=null && search.indexOf(":")>0){
+            searchParams=search.split(":");
         }
         logger.info("isSystemAdmin(authorizingUser): " + isSystemAdmin(authorizingUser));
         logger.info("isTenantAdmin(authorizingUser, organizationId): "
@@ -552,14 +548,14 @@ public class UserLogic {
 
         if (organizationId == null && isSystemAdmin(authorizingUser)) {
             logger.info("getOrganizationUsers1");
-            users = (ArrayList) userDao.getUsers(limit, offset);
+            users = (ArrayList) userDao.getUsers(limit, offset, searchParams[0], searchParams[1]);
         }
 
         if (organizationId != null && tenantId == null || tenantId == 0) {
             if (isTenantAdmin(authorizingUser, organizationId) || isSystemAdmin(authorizingUser)
                     || isManagingAdmin(authorizingUser, organizationId)) {
                 logger.info("getOrganizationUsers2");
-                users = (ArrayList) userDao.getOrganizationUsers(organizationId, limit, offset);
+                users = (ArrayList) userDao.getOrganizationUsers(organizationId, limit, offset, searchParams[0], searchParams[1]);
             } else {
                 logger.info("getOrganizationUsers2a");
             }
@@ -569,7 +565,7 @@ public class UserLogic {
                 && (isSystemAdmin(authorizingUser) || isTenantAdmin(authorizingUser, organizationId)
                         || isManagingAdmin(authorizingUser, organizationId))) {
             logger.info("getOrganizationUsers3");
-            users = (ArrayList) userDao.getTenantUsers(tenantId, limit, offset);
+            users = (ArrayList) userDao.getTenantUsers(tenantId, limit, offset, searchParams[0], searchParams[1]);
         }
         return users;
     }

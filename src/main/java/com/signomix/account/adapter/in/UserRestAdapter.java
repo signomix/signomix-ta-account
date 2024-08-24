@@ -44,7 +44,9 @@ public class UserRestAdapter {
     @GET
     public Response getUsers(
             @HeaderParam("Authentication") String token,
-            @QueryParam("offset") int offset, @QueryParam("limit") int limit) {
+            @QueryParam("offset") int offset, 
+            @QueryParam("limit") int limit,
+            @QueryParam("search") String search) {
 
         List<User> users = null;
         User authorizingUser;
@@ -65,7 +67,7 @@ public class UserRestAdapter {
             logger.info("getUser uid from token: " + authorizingUser.uid);
         }
         try {
-            users = userPort.getUsers(authorizingUser, limit, offset);
+            users = userPort.getUsers(authorizingUser, limit, offset, search);
         } catch (ServiceException | IotDatabaseException e) {
             e.printStackTrace();
             throw new ServiceException(userDatabaseException);

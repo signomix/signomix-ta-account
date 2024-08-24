@@ -32,7 +32,7 @@ public class AccountPort {
     public List<User> getAccounts(User user, int limit, int offset, String searchString) {
         // return accountLogic.getAccounts(user, limit, offset, searchString);
         try {
-            return userLogic.getUsers(user, limit, offset);
+            return userLogic.getUsers(user, limit, offset, searchString);
         } catch (IotDatabaseException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
