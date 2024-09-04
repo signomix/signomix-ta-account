@@ -15,6 +15,7 @@ import com.signomix.common.Token;
 import com.signomix.common.TokenType;
 import com.signomix.common.User;
 import com.signomix.common.db.IotDatabaseException;
+import com.signomix.common.db.IotDatabaseIface;
 import com.signomix.common.db.OrganizationDao;
 import com.signomix.common.db.OrganizationDaoIface;
 import com.signomix.common.db.UserDao;
@@ -45,8 +46,13 @@ public class UserLogic {
     @DataSource("user")
     AgroalDataSource userDataSource;
 
+    @Inject
+    @DataSource("oltp")
+    AgroalDataSource iotDataSource;
+
     UserDaoIface userDao;
     OrganizationDaoIface organizationDao;
+    IotDatabaseIface iotDao;
 
     @ConfigProperty(name = "signomix.exception.api.unauthorized")
     String userNotAuthorizedException;
@@ -84,8 +90,8 @@ public class UserLogic {
             userDao.setDatasource(userDataSource);
             organizationDao = new com.signomix.common.tsdb.OrganizationDao();
             organizationDao.setDatasource(userDataSource);
-            // iotDao = new com.signomix.common.tsdb.IotDatabaseDao();
-            // iotDao.setDatasource(tsDs);
+            iotDao = new com.signomix.common.tsdb.IotDatabaseDao();
+            iotDao.setDatasource(iotDataSource);
             defaultOrganizationId = 1;
         } else {
             logger.error("Unknown database type: " + databaseType);
@@ -109,6 +115,8 @@ public class UserLogic {
                 || isTenantAdmin(authorizingUser, user.organization, user.getPathRoot())
                 || isManagingAdmin(authorizingUser, user.organization)
                 || authorizingUser.uid.equals(uid)) {
+            Integer numberOfDevices = iotDao.getUserDevicesCount(uid);
+            user.devicesCounter = numberOfDevices;
             return user;
         } else {
             throw new ServiceException(userNotAuthorizedException);
