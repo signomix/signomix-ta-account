@@ -1,14 +1,5 @@
 package com.signomix.account.domain;
 
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.eclipse.microprofile.reactive.messaging.Channel;
-import org.eclipse.microprofile.reactive.messaging.Emitter;
-import org.jboss.logging.Logger;
-
 import com.signomix.account.exception.ServiceException;
 import com.signomix.common.HashMaker;
 import com.signomix.common.Token;
@@ -23,7 +14,6 @@ import com.signomix.common.db.UserDaoIface;
 import com.signomix.common.gui.Dashboard;
 import com.signomix.common.iot.Device;
 import com.signomix.common.iot.DeviceGroup;
-
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.agroal.DataSource;
 import io.quarkus.runtime.StartupEvent;
@@ -31,6 +21,13 @@ import io.questdb.client.Sender;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
+import org.jboss.logging.Logger;
 
 /**
  * Klasa zawierająca logikę biznesową dotyczącą autoryzacji.
@@ -183,8 +180,10 @@ public class UserLogic {
      */
 
     private void sendUserEvent(String userEventType, User authorizingUser, String userUid) {
+        //logger.info("sendUserEvent: " + userEventType + " " + authorizingUser + " " + userUid);
         String authorizingUserUid = authorizingUser == null ? "" : authorizingUser.uid;
         eventEmitter.send(userEventType + mqttFieldSeparator + authorizingUserUid + mqttFieldSeparator + userUid);
+        //logger.info("sendingEvent - after send");
     }
 
     public void resetPassword(String uid, String email) {
