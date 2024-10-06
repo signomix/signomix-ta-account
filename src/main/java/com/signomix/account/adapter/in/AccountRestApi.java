@@ -1,15 +1,9 @@
 package com.signomix.account.adapter.in;
 
-import java.net.URI;
-import java.util.List;
-
-import org.jboss.logging.Logger;
-
 import com.signomix.account.port.in.AccountPort;
 import com.signomix.account.port.in.AuthPort;
 import com.signomix.account.port.in.UserPort;
 import com.signomix.common.User;
-
 import jakarta.inject.Inject;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -22,6 +16,9 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
+import java.net.URI;
+import java.util.List;
+import org.jboss.logging.Logger;
 
 @Path("/api/account")
 public class AccountRestApi {
@@ -268,14 +265,22 @@ public class AccountRestApi {
         try {
             regiseredUser = accountPort.confirmRegistration(confirmString);
         } catch (Exception e) {
+            e.printStackTrace();
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
         if (regiseredUser == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         } else {
+            try{
+                logger.info("Redirecting to: " + redirectUrl);
+                URI uri=URI.create(redirectUrl);
             return Response.status(Response.Status.SEE_OTHER)
-                    .location(URI.create(redirectUrl))
+                    .location(uri)
                     .build();
+            } catch (Exception e) {
+                e.printStackTrace();
+                return Response.status(Response.Status.BAD_REQUEST).build();
+            }
         }
     }
 

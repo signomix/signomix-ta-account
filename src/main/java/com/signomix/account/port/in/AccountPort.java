@@ -1,14 +1,12 @@
 package com.signomix.account.port.in;
 
-import java.util.List;
-
 import com.signomix.account.domain.AccountLogic;
 import com.signomix.account.domain.UserLogic;
 import com.signomix.common.User;
 import com.signomix.common.db.IotDatabaseException;
-
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.util.List;
 
 @ApplicationScoped
 public class AccountPort {
@@ -53,7 +51,8 @@ public class AccountPort {
     }
 
     public String confirmRegistration(String confirmString) {
-        return userLogic.confirmRegistration(confirmString);
+        String uid=userLogic.confirmRegistration(confirmString);
+        return uid;
     }
 
     public void requestRemoveAccount(User user, String uid) {

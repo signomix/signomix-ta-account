@@ -112,8 +112,10 @@ public class UserLogic {
                 || isTenantAdmin(authorizingUser, user.organization, user.getPathRoot())
                 || isManagingAdmin(authorizingUser, user.organization)
                 || authorizingUser.uid.equals(uid)) {
+            /*
+            // not needed anymore because of the new getUser method in UserDao 
             Integer numberOfDevices = iotDao.getUserDevicesCount(uid);
-            user.devicesCounter = numberOfDevices;
+            user.devicesCounter = numberOfDevices; */
             return user;
         } else {
             throw new ServiceException(userNotAuthorizedException);
@@ -121,7 +123,17 @@ public class UserLogic {
     }
 
     public String confirmRegistration(String token) {
-        return authLogic.getUserId(token);
+        User user = authLogic.getUser(authLogic.getUserId(token));
+        try {
+            user.authStatus = User.IS_ACTIVE;
+            userDao.updateUser(user);
+            sendUserEvent("confirmed", null, user.uid);
+        } catch (IotDatabaseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return null;
+        }
+        return user.uid;
     }
 
     public User checkUser(String uid) {
