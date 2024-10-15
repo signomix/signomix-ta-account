@@ -1,28 +1,21 @@
 package com.signomix.account.adapter.in;
 
-import java.util.List;
-
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
-
 import com.signomix.account.exception.ServiceException;
 import com.signomix.account.port.in.AuthPort;
 import com.signomix.account.port.in.UserPort;
-import com.signomix.common.Token;
 import com.signomix.common.User;
 import com.signomix.common.annotation.InboundAdapter;
 import com.signomix.common.db.IotDatabaseException;
-
 import jakarta.inject.Inject;
 import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
 
 @InboundAdapter
 @Path("/api/user")
@@ -41,6 +34,7 @@ public class UserRestAdapter {
     @ConfigProperty(name = "signomix.exception.user.database")
     String userDatabaseException;
 
+    /* 
     @GET
     public Response getUsers(
             @HeaderParam("Authentication") String token,
@@ -75,7 +69,7 @@ public class UserRestAdapter {
         return Response.ok().entity(users).build();
     }
 
-    @GET
+     @GET
     @Path("/{uid}")
     public Response getUser(
             @HeaderParam("Authentication") String token,
@@ -110,7 +104,7 @@ public class UserRestAdapter {
             throw new ServiceException(userDatabaseException);
         }
         return Response.ok().entity(user).build();
-    }
+    } */
 
     @PUT
     @Path("/{uid}")
@@ -213,19 +207,12 @@ public class UserRestAdapter {
         return Response.ok().build();
     }
 
+/*     
     @GET
     @Path("/confirm")
     public Response confirmUser(
             @QueryParam("token") String token) {
         logger.info("Handling confirmUser request with token: " + token);
-        /*
-         * try {
-         * userPort.confirmUser(token);
-         * } catch (IotDatabaseException e) {
-         * e.printStackTrace();
-         * throw new ServiceException(userDatabaseException);
-         * }
-         */
         return Response.ok().build();
     }
 
@@ -234,15 +221,8 @@ public class UserRestAdapter {
     public Response resetPassword(
             @QueryParam("token") String token) {
         logger.info("Handling confirmUser request with token: " + token);
-        /*
-         * try {
-         * userPort.resetPassword(token);
-         * } catch (IotDatabaseException e) {
-         * e.printStackTrace();
-         * throw new ServiceException(userDatabaseException);
-         * }
-         */
         return Response.ok().build();
-    }
+    } 
+    */
 
 }

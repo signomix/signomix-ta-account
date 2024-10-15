@@ -1,20 +1,17 @@
 package com.signomix.account.domain;
 
-import java.util.List;
-
-import org.jboss.logging.Logger;
-
 import com.signomix.common.Tenant;
 import com.signomix.common.User;
 import com.signomix.common.db.IotDatabaseException;
 import com.signomix.common.db.OrganizationDaoIface;
-
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.agroal.DataSource;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
+import java.util.List;
+import org.jboss.logging.Logger;
 
 /**
  * Klasa zawierająca logikę biznesową dotyczącą autoryzacji.
@@ -49,10 +46,10 @@ public class TenantLogic {
     public Tenant getTenantById(User user, Integer tenantId) throws IotDatabaseException {
         Tenant tenant = organiaztionDao.getTenant(tenantId);
         if(tenant==null){
-            throw new IotDatabaseException(IotDatabaseException.UNKNOWN, "Tenant not found" );
+            throw new IotDatabaseException(IotDatabaseException.UNKNOWN, "Tenant not found: "+tenantId );
         }
         if(user.organization!=tenant.organizationId){
-            throw new IotDatabaseException(IotDatabaseException.UNKNOWN, "Tenant not found" );
+            throw new IotDatabaseException(IotDatabaseException.UNKNOWN, "User organization and tenant organization don't match: "+user.organization+"!="+tenant.organizationId );
         }
         return tenant;
     }

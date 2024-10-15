@@ -46,7 +46,7 @@ public class AccountRestApi {
      * @return
      */
     @GET
-    @Path("/{uid}")
+    @Path("/user/{uid}")
     public Response getUser(@HeaderParam("Authentication") String token, @PathParam("uid") String uid) {
         User user = authPort.getUser(token);
         if (user == null) {
@@ -144,7 +144,7 @@ public class AccountRestApi {
      * @return
      */
     @PUT
-    @Path("/{uid}")
+    @Path("/user/{uid}")
     public Response updateAccount(@HeaderParam("Authentication") String token, @PathParam("uid") String uid,
             User updatedUser) {
         User user = authPort.getUser(token);
@@ -167,7 +167,7 @@ public class AccountRestApi {
      * @return
      */
     @DELETE
-    @Path("/{uid}")
+    @Path("/user/{uid}")
     public Response removeAccount(@HeaderParam("Authentication") String token, @PathParam("uid") String uid) {
         User user = authPort.getUser(token);
         if (user == null) {
@@ -189,7 +189,7 @@ public class AccountRestApi {
      * @return
      */
     @PUT
-    @Path("/{uid}/remove")
+    @Path("/user/{uid}/remove")
     public Response requestRemove(@HeaderParam("Authentication") String token, @PathParam("uid") String uid) {
         User user = authPort.getUser(token);
         if (user == null) {
@@ -212,7 +212,7 @@ public class AccountRestApi {
      * @return
      */
     @PUT
-    @Path("/{uid}/password")
+    @Path("/user/{uid}/password")
     public Response changePassword(@HeaderParam("Authentication") String token, @PathParam("uid") String uid,
             User modifiedUser) {
         User user = authPort.getUser(token);
@@ -238,7 +238,7 @@ public class AccountRestApi {
      * @return
      */
     @POST
-    @Path("/{uid}/resetpassword")
+    @Path("/user/{uid}/resetpassword")
     public Response resetPassword(@PathParam("uid") String uid,
             @QueryParam("email") String email) {
         try {
