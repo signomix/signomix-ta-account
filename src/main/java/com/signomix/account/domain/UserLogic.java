@@ -126,6 +126,7 @@ public class UserLogic {
         User user = authLogic.getUser(authLogic.getUserId(token));
         try {
             user.authStatus = User.IS_ACTIVE;
+            user.confirmed = true;
             userDao.updateUser(user);
             sendUserEvent("confirmed", null, user.uid);
         } catch (IotDatabaseException e) {
