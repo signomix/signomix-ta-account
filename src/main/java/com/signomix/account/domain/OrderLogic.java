@@ -1,24 +1,22 @@
 package com.signomix.account.domain;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.eclipse.microprofile.reactive.messaging.Channel;
-import org.eclipse.microprofile.reactive.messaging.Emitter;
-import org.jboss.logging.Logger;
-
 import com.signomix.common.User;
 import com.signomix.common.billing.Order;
 import com.signomix.common.db.BillingDaoIface;
 import com.signomix.common.db.OrganizationDaoIface;
-
+import com.signomix.proprietary.AccountTypes;
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.agroal.DataSource;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class OrderLogic {
@@ -44,6 +42,8 @@ public class OrderLogic {
     // TODO: this should be from configuration
     private static final double VAT_RATE = 0.23; // Stawka VAT 23%
     private static final String VAT_RATE_STR = "23%";
+
+    private AccountTypes accountTypes = new AccountTypes();
 
     void onStart(@Observes StartupEvent ev) {
         billingDao = new com.signomix.common.tsdb.BillingDao();
@@ -82,34 +82,23 @@ public class OrderLogic {
         return bd.doubleValue();
     }
 
+    /**
+     * Send order events.
+     * In this version, only two events are sent: created and proforma.
+     * In the future, the events will be separated and depending on the order parameters (e.g. payment method).
+     * @param orderId
+     */
     private void sendOrderEvent(String orderId) {
         orderEventEmitter.send("created;" + orderId);
+        orderEventEmitter.send("proforma;" + orderId);
     }
 
     // TODO: this should be from configuration
     private Double getPrice(Order order) {
         if (order.yearly) {
-            switch (order.targetType) {
-                case 0:
-                    return 550.0;
-                case 4:
-                    return 0.0;
-                case 5:
-                    return 2200.0;
-                default:
-                    return null;
-            }
+            return accountTypes.getYearlyPrice(order.targetType, "pln");
         } else {
-            switch (order.targetType) {
-                case 0:
-                    return 50.0;
-                case 4:
-                    return 0.0;
-                case 5:
-                    return 200.0;
-                default:
-                    return null;
-            }
+            return accountTypes.getMonthlyPrice(order.targetType, "pln");
         }
     }
 
