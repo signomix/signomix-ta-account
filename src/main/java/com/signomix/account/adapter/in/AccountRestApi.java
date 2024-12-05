@@ -52,7 +52,7 @@ public class AccountRestApi {
         if (user == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
-        user = accountPort.getAccount(user, user.uid);
+        user = accountPort.getAccount(user, uid);
         return Response.ok().entity(user).build();
     }
 

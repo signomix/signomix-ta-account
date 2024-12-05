@@ -107,6 +107,7 @@ public class UserLogic {
         if (authorizingUser == null) {
             throw new ServiceException(userNotAuthorizedException);
         }
+        //logger.info("getUser: " + uid+ " authorized by: "+authorizingUser.uid);
         User user = userDao.getUser(uid);
         if (isSystemAdmin(authorizingUser)
                 || isTenantAdmin(authorizingUser, user.organization, user.getPathRoot())
