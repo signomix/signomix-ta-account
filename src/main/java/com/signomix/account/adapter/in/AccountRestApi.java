@@ -1,9 +1,15 @@
 package com.signomix.account.adapter.in;
 
+import java.net.URI;
+import java.util.List;
+
+import org.jboss.logging.Logger;
+
 import com.signomix.account.port.in.AccountPort;
 import com.signomix.account.port.in.AuthPort;
 import com.signomix.account.port.in.UserPort;
 import com.signomix.common.User;
+
 import jakarta.inject.Inject;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -16,9 +22,6 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
-import java.net.URI;
-import java.util.List;
-import org.jboss.logging.Logger;
 
 @Path("/api/account")
 public class AccountRestApi {
@@ -48,11 +51,11 @@ public class AccountRestApi {
     @GET
     @Path("/user/{uid}")
     public Response getUser(@HeaderParam("Authentication") String token, @PathParam("uid") String uid) {
-        User user = authPort.getUser(token);
-        if (user == null) {
+        User authorizingUser = authPort.getUser(token);
+        if (authorizingUser == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
-        user = accountPort.getAccount(user, uid);
+        User user = accountPort.getAccount(authorizingUser, uid);
         return Response.ok().entity(user).build();
     }
 
