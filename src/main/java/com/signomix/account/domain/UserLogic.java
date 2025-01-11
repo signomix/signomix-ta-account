@@ -1,5 +1,14 @@
 package com.signomix.account.domain;
 
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
+import org.jboss.logging.Logger;
+
 import com.signomix.account.exception.ServiceException;
 import com.signomix.common.HashMaker;
 import com.signomix.common.Token;
@@ -14,6 +23,8 @@ import com.signomix.common.db.UserDaoIface;
 import com.signomix.common.gui.Dashboard;
 import com.signomix.common.iot.Device;
 import com.signomix.common.iot.DeviceGroup;
+import com.signomix.proprietary.ExtensionPoints;
+
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.agroal.DataSource;
 import io.quarkus.runtime.StartupEvent;
@@ -21,13 +32,6 @@ import io.questdb.client.Sender;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.eclipse.microprofile.reactive.messaging.Channel;
-import org.eclipse.microprofile.reactive.messaging.Emitter;
-import org.jboss.logging.Logger;
 
 /**
  * Klasa zawierająca logikę biznesową dotyczącą autoryzacji.
@@ -69,6 +73,9 @@ public class UserLogic {
 
     @Inject
     AuthLogic authLogic;
+
+    @Inject
+    AccountLogic accountLogic;
 
     @Inject
     @Channel("user-events")
@@ -130,6 +137,7 @@ public class UserLogic {
             user.confirmed = true;
             userDao.updateUser(user);
             sendUserEvent("confirmed", null, user.uid);
+            accountLogic.registerAccount(user);
         } catch (IotDatabaseException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -429,8 +437,9 @@ public class UserLogic {
             updatedUser.surname = user.surname;
         if (user.email != null)
             updatedUser.email = user.email;
-        if (user.phonePrefix != null)
-            updatedUser.phonePrefix = user.phonePrefix;
+        // if (user.phonePrefix != null)
+        //     updatedUser.phonePrefix = user.phonePrefix;
+        updatedUser.phonePrefix = "+48"; // only polish phone numbers are allowed
         if (user.phone != null)
             updatedUser.phone = user.phone;
         if (user.generalNotificationChannel != null)
@@ -445,6 +454,30 @@ public class UserLogic {
 
         logger.info("user G-CHANNEL: " + user.generalNotificationChannel);
         logger.info("updatedUser G-CHANNEL: " + updatedUser.generalNotificationChannel);
+
+        // set services and credits
+        if(isPaidUserType(updatedUser.type)){
+            if(newUser){
+                updatedUser.services = User.SERVICE_SMS | User.SERVICE_SUPPORT;
+                updatedUser.credits = ExtensionPoints.getStartingPoints();
+            }else{
+                boolean actuallyPaid = isPaidUserType(actualUser.type);
+                // if user was not of paid type and now is - give him starting points
+                if(!actuallyPaid){
+                    updatedUser.services = User.SERVICE_SMS | User.SERVICE_SUPPORT;
+                    updatedUser.credits = ExtensionPoints.getStartingPoints();
+                }
+            }
+        }else{
+            if(!newUser){
+                boolean actuallyPaid = isPaidUserType(actualUser.type);
+                // if user was of paid type and now is not - remove his points
+                if(actuallyPaid){
+                    updatedUser.services = 0;
+                    updatedUser.credits = 0L;
+                }
+            }
+        }
 
         // finally: save user
         if (newUser) {
@@ -479,6 +512,7 @@ public class UserLogic {
                 sendUserEvent("created", authorizingUser, user.uid);
             } else if (updatedUser.authStatus == User.IS_ACTIVE) {
                 sendUserEvent("created_and_activated", authorizingUser, user.uid);
+                accountLogic.registerAccount(updatedUser);
             } else {
                 sendUserEvent("event", authorizingUser, user.uid);
             }
@@ -493,6 +527,15 @@ public class UserLogic {
             sendUserEvent("updated", authorizingUser, updatedUser.uid);
         }
 
+    }
+
+    private boolean isPaidUserType(int userType) {
+        for (int i : User.PAID_TYPES) {
+            if (i == userType) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void deleteUser(User authorizingUser, String uid) throws IotDatabaseException {

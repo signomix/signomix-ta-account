@@ -29,6 +29,10 @@ public class AccountLogic {
     AgroalDataSource userDataSource;
 
     @Inject
+    @DataSource("billing")
+    AgroalDataSource billingDataSource;
+
+    @Inject
     @DataSource("oltp")
     AgroalDataSource iotDataSource;
 
@@ -39,7 +43,7 @@ public class AccountLogic {
         userDao = new com.signomix.common.tsdb.UserDao();
         userDao.setDatasource(userDataSource);
         billingDao = new BillingDao();
-        billingDao.setDatasource(userDataSource);
+        billingDao.setDatasource(billingDataSource);
     }
 
     public void registerAccount(String login, String email, String password) {
@@ -73,7 +77,14 @@ public class AccountLogic {
     }
 
     public void registerAccount(User newUser) {
-
+        if (ExtensionPoints.isControlled()){
+            try {
+                long points = ExtensionPoints.getStartingPoints();
+                billingDao.registerServicePoints(null, points);
+            }catch (IotDatabaseException e){
+                logger.error(e.getMessage());
+            }
+        }
     }
 
     public void registerAccount(User admin, User newUser) {
@@ -127,7 +138,7 @@ public class AccountLogic {
     }
     */
     public void registerSms(String uidString, int smsCount) {
-        int pointsForSMS=0;
+        long pointsForSMS=0;
         try {
             pointsForSMS = ExtensionPoints.getPointsForSMS();
         } catch (Exception e) {
