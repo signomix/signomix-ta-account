@@ -137,7 +137,7 @@ public class AccountLogic {
         userDao.updateUser(user);
     }
     */
-    public void registerSms(String uidString, int smsCount) {
+    public void registerSms(String uidString, int smsCount, long messageId) {
         long pointsForSMS=0;
         try {
             pointsForSMS = ExtensionPoints.getPointsForSMS();
