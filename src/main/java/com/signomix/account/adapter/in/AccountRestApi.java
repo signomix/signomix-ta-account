@@ -50,12 +50,23 @@ public class AccountRestApi {
      */
     @GET
     @Path("/user/{uid}")
-    public Response getUser(@HeaderParam("Authentication") String token, @PathParam("uid") String uid) {
+    public Response getUser(@HeaderParam("Authentication") String token, 
+    @HeaderParam("X-signomix-takeover") String takeover,
+    @PathParam("uid") String uid) {
         User authorizingUser = authPort.getUser(token);
         if (authorizingUser == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
         User user = accountPort.getAccount(authorizingUser, uid);
+        if(takeover!=null && takeover.equalsIgnoreCase("true")){
+            if(user.role==null){
+                user.role = "takeover";
+            } else if(user.role.endsWith(",")){
+                user.role = user.role+"takeover,";
+            } else {
+                user.role = user.role+",takeover,";
+            }
+        }
         return Response.ok().entity(user).build();
     }
 
