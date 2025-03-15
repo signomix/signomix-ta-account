@@ -72,7 +72,7 @@ public class TenantRestApi {
      * @return
      */
     @GET
-    @Path("/{id}")
+    @Path("/search/{id}")
     public Response getTenantById(@HeaderParam("Authentication") String token, @PathParam("id") Integer id) {
         User user = authPort.getUser(token);
         if (user == null) {
@@ -97,6 +97,7 @@ public class TenantRestApi {
      * @return
      */
     @GET
+    @Path("/search")
     public Response getTenantByRoot(@HeaderParam("Authentication") String token, 
     @QueryParam("organization") Long organizationId, @QueryParam("root") String root) {
         User user = authPort.getUser(token);

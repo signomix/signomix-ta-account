@@ -69,7 +69,7 @@ public class TenantLogic {
         if(!(user.type==User.MANAGING_ADMIN || user.type==User.OWNER)){
             throw new IotDatabaseException(IotDatabaseException.UNKNOWN, "Not available" );
         }
-        organiaztionDao.addTenant(tenant.organizationId, tenant.name, tenant.root, tenant.menuDefinition);
+        organiaztionDao.addTenant(tenant.organizationId, tenant.name, tenant.root, tenant.configuration);
     }
 
     public void updateTenant(User user, Tenant tenant)  throws IotDatabaseException{
@@ -83,7 +83,7 @@ public class TenantLogic {
         if(!organiaztionDao.canEditTenant(user, original)){
             throw new IotDatabaseException(IotDatabaseException.UNKNOWN, "Not available" );
         }
-        organiaztionDao.updateTenant(tenant.id, tenant.organizationId, tenant.name, tenant.root, tenant.menuDefinition);
+        organiaztionDao.updateTenant(tenant.id, tenant.organizationId, tenant.name, tenant.root, tenant.configuration);
     }
 
     public void deleteTenant(User user, Integer tenantId) throws IotDatabaseException{

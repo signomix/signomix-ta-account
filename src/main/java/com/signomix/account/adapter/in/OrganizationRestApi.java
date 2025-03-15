@@ -102,7 +102,7 @@ public class OrganizationRestApi {
      */
     @PUT
     @Path("/{id}")
-    public Response updateOrganization(@HeaderParam("Authentication") String token, @PathParam("id") Long id,
+    public Response updateOrganization(@HeaderParam("Authentication") String token, @PathParam("id") Integer id,
             Organization organization) {
         User user = authPort.getUser(token);
         if (user == null) {
