@@ -72,6 +72,25 @@ public class OrganizationRestApi {
     }
 
     /**
+     * Get registered organizations
+     * 
+     * @param token
+     * @param offset
+     * @param limit
+     * @return
+     */
+    @GET
+    public Response getOrganizations(@HeaderParam("Authentication") String token, @QueryParam("offset") int offset,
+            @QueryParam("limit") int limit) {
+        User user = authPort.getUser(token);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        List<Organization> organizations = organizationPort.getOrganizations(user, limit, offset);
+        return Response.ok().entity(organizations).build();
+    }
+
+    /**
      * Register new account for user. Registering user must be organization admin or
      * service admin.
      * 
@@ -104,19 +123,26 @@ public class OrganizationRestApi {
     @Path("/{id}")
     public Response updateOrganization(@HeaderParam("Authentication") String token, @PathParam("id") Integer id,
             Organization organization) {
-        User user = authPort.getUser(token);
-        if (user == null) {
+        try {
+            User user = authPort.getUser(token);
+            if (user == null) {
+                return Response.status(Response.Status.UNAUTHORIZED).build();
+            }
+            if (organization.id.intValue() != id.intValue()) {
+                logger.error("Organization id does not match: " + organization.id + " != " + id);
+                return Response.status(Response.Status.BAD_REQUEST).build();
+            }
+            try {
+                organizationPort.updateOrganization(user, organization);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return Response.status(Response.Status.BAD_REQUEST.getStatusCode(), e.getMessage()).build();
+            }
+            return Response.ok().build();
+        } catch (Exception e) {
+            e.printStackTrace();
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
-        if(organization.id != id){
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
-        try {
-            organizationPort.updateOrganization(user, organization);
-        } catch (Exception e) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
-        return Response.ok().build();
     }
 
     /**
@@ -169,7 +195,7 @@ public class OrganizationRestApi {
             logger.info("getUser uid from token: " + authorizingUser.uid);
         }
         try {
-            //users = userPort.getUsers(authorizingUser, organizationId, limit, offset);
+            // users = userPort.getUsers(authorizingUser, organizationId, limit, offset);
             users = userPort.getUsers(authorizingUser, organizationId, tenantId, limit, offset, search);
         } catch (IotDatabaseException e) {
             e.printStackTrace();
@@ -177,6 +203,5 @@ public class OrganizationRestApi {
         }
         return Response.ok().entity(users).build();
     }
-
 
 }

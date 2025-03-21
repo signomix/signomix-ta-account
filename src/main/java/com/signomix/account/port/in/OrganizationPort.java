@@ -1,5 +1,7 @@
 package com.signomix.account.port.in;
 
+import java.util.List;
+
 import com.signomix.account.domain.OrganizationLogic;
 import com.signomix.common.Organization;
 import com.signomix.common.User;
@@ -15,6 +17,10 @@ public class OrganizationPort {
 
     public Organization getOrganization(User user, Integer id){
         return organizationLogic.getOrganization(user, id);
+    }
+
+    public List<Organization> getOrganizations(User user, Integer limit, Integer offset){
+        return organizationLogic.getOrganizations(user, limit, offset);
     }
 
     public void addOrganization(User user, Organization organization){

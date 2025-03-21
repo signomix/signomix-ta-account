@@ -92,6 +92,14 @@ public class OrganizationLogic {
         }
     }
 
+    public List<Organization> getOrganizations(User user, Integer limit, Integer offset) throws ServiceException {
+        try {
+            return organizationDao.getOrganizations(limit, offset);
+        } catch (IotDatabaseException e) {
+            throw new ServiceException(e.getMessage());
+        }
+    }
+
     public void addOrganization(User user, Organization organization) throws ServiceException {
         try {
             organizationDao.addOrganization(organization);
