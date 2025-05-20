@@ -1,11 +1,5 @@
 package com.signomix.account.adapter.in;
 
-import java.util.List;
-
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
-import org.jboss.resteasy.annotations.Query;
-
 import com.signomix.account.exception.ServiceException;
 import com.signomix.account.port.in.AuthPort;
 import com.signomix.account.port.in.OrganizationPort;
@@ -13,7 +7,6 @@ import com.signomix.account.port.in.UserPort;
 import com.signomix.common.Organization;
 import com.signomix.common.User;
 import com.signomix.common.db.IotDatabaseException;
-
 import jakarta.inject.Inject;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -26,6 +19,9 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
+import java.util.List;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
 
 @Path("/api/organization")
 public class OrganizationRestApi {
@@ -50,19 +46,23 @@ public class OrganizationRestApi {
 
     @ConfigProperty(name = "signomix.exception.api.unauthorized")
     String unauthorizedException;
+
     @ConfigProperty(name = "signomix.exception.user.database")
     String userDatabaseException;
 
     /**
      * Get organization data.
-     * 
+     *
      * @param token
      * @param uid
      * @return
      */
     @GET
     @Path("/{id}")
-    public Response getOrganization(@HeaderParam("Authentication") String token, @PathParam("id") Integer id) {
+    public Response getOrganization(
+        @HeaderParam("Authentication") String token,
+        @PathParam("id") Integer id
+    ) {
         User user = authPort.getUser(token);
         if (user == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -73,33 +73,43 @@ public class OrganizationRestApi {
 
     /**
      * Get registered organizations
-     * 
+     *
      * @param token
      * @param offset
      * @param limit
      * @return
      */
     @GET
-    public Response getOrganizations(@HeaderParam("Authentication") String token, @QueryParam("offset") int offset,
-            @QueryParam("limit") int limit) {
+    public Response getOrganizations(
+        @HeaderParam("Authentication") String token,
+        @QueryParam("offset") int offset,
+        @QueryParam("limit") int limit
+    ) {
         User user = authPort.getUser(token);
         if (user == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
-        List<Organization> organizations = organizationPort.getOrganizations(user, limit, offset);
+        List<Organization> organizations = organizationPort.getOrganizations(
+            user,
+            limit,
+            offset
+        );
         return Response.ok().entity(organizations).build();
     }
 
     /**
      * Register new account for user. Registering user must be organization admin or
      * service admin.
-     * 
+     *
      * @param token
      * @param newUser
      * @return
      */
     @POST
-    public Response addOrganization(@HeaderParam("Authentication") String token, Organization organization) {
+    public Response addOrganization(
+        @HeaderParam("Authentication") String token,
+        Organization organization
+    ) {
         User user = authPort.getUser(token);
         if (user == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -114,29 +124,40 @@ public class OrganizationRestApi {
 
     /**
      * Upddate user data.
-     * 
+     *
      * @param token
      * @param uid
      * @return
      */
     @PUT
     @Path("/{id}")
-    public Response updateOrganization(@HeaderParam("Authentication") String token, @PathParam("id") Integer id,
-            Organization organization) {
+    public Response updateOrganization(
+        @HeaderParam("Authentication") String token,
+        @PathParam("id") Integer id,
+        Organization organization
+    ) {
         try {
             User user = authPort.getUser(token);
             if (user == null) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
             }
             if (organization.id.intValue() != id.intValue()) {
-                logger.error("Organization id does not match: " + organization.id + " != " + id);
+                logger.error(
+                    "Organization id does not match: " +
+                    organization.id +
+                    " != " +
+                    id
+                );
                 return Response.status(Response.Status.BAD_REQUEST).build();
             }
             try {
                 organizationPort.updateOrganization(user, organization);
             } catch (Exception e) {
                 e.printStackTrace();
-                return Response.status(Response.Status.BAD_REQUEST.getStatusCode(), e.getMessage()).build();
+                return Response.status(
+                    Response.Status.BAD_REQUEST.getStatusCode(),
+                    e.getMessage()
+                ).build();
             }
             return Response.ok().build();
         } catch (Exception e) {
@@ -147,14 +168,17 @@ public class OrganizationRestApi {
 
     /**
      * Change user data.
-     * 
+     *
      * @param token
      * @param uid
      * @return
      */
     @DELETE
     @Path("/{id}")
-    public Response deleteOrganization(@HeaderParam("Authentication") String token, @PathParam("id") Integer id) {
+    public Response deleteOrganization(
+        @HeaderParam("Authentication") String token,
+        @PathParam("id") Integer id
+    ) {
         User user = authPort.getUser(token);
         if (user == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -170,16 +194,19 @@ public class OrganizationRestApi {
     @GET
     @Path("/users")
     public Response getUsers(
-            @HeaderParam("Authentication") String token,
-            @QueryParam("organization") Long organizationId,
-            @QueryParam("tenant") Integer tenantId,
-            @QueryParam("offset") int offset, @QueryParam("limit") int limit,
-            @QueryParam("search") String search) {
-
+        @HeaderParam("Authentication") String token,
+        @QueryParam("organization") Long organizationId,
+        @QueryParam("tenant") Integer tenantId,
+        @QueryParam("offset") int offset,
+        @QueryParam("limit") int limit,
+        @QueryParam("search") String search
+    ) {
         List<User> users = null;
         User authorizingUser;
         try {
-            authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
+            authorizingUser = userPort.getAuthorizing(
+                authPort.getUserId(token)
+            );
         } catch (IotDatabaseException e) {
             logger.error("getUser: " + e.getMessage());
             e.printStackTrace();
@@ -196,12 +223,18 @@ public class OrganizationRestApi {
         }
         try {
             // users = userPort.getUsers(authorizingUser, organizationId, limit, offset);
-            users = userPort.getUsers(authorizingUser, organizationId, tenantId, limit, offset, search);
+            users = userPort.getUsers(
+                authorizingUser,
+                organizationId,
+                tenantId,
+                limit,
+                offset,
+                search
+            );
         } catch (IotDatabaseException e) {
             e.printStackTrace();
             throw new ServiceException(userDatabaseException);
         }
         return Response.ok().entity(users).build();
     }
-
 }

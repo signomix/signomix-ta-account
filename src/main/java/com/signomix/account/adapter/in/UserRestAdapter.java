@@ -26,19 +26,21 @@ public class UserRestAdapter {
 
     @Inject
     AuthPort authPort;
+
     @Inject
     UserPort userPort;
 
     @ConfigProperty(name = "signomix.exception.api.unauthorized")
     String unauthorizedException;
+
     @ConfigProperty(name = "signomix.exception.user.database")
     String userDatabaseException;
 
-    /* 
+    /*
     @GET
     public Response getUsers(
             @HeaderParam("Authentication") String token,
-            @QueryParam("offset") int offset, 
+            @QueryParam("offset") int offset,
             @QueryParam("limit") int limit,
             @QueryParam("search") String search) {
 
@@ -109,13 +111,19 @@ public class UserRestAdapter {
     @PUT
     @Path("/{uid}")
     public Response updateUser(
-            @HeaderParam("Authentication") String token,
-            @PathParam("uid") String uid, User user) {
-        logger.info("Handling getUser request for uid token: " + uid + " " + token);
+        @HeaderParam("Authentication") String token,
+        @PathParam("uid") String uid,
+        User user
+    ) {
+        logger.info(
+            "Handling getUser request for uid token: " + uid + " " + token
+        );
 
         User authorizingUser;
         try {
-            authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
+            authorizingUser = userPort.getAuthorizing(
+                authPort.getUserId(token)
+            );
         } catch (IotDatabaseException e) {
             logger.error("getUser: " + e.getMessage());
             e.printStackTrace();
@@ -140,15 +148,36 @@ public class UserRestAdapter {
         return Response.ok().build();
     }
 
+    /**
+     * Handles the creation of a new user.
+     *
+     * @param token The authentication token provided in the request header.
+     *              This token is used to identify the authorizing user.
+     * @param user  The user object containing the details of the user to be created.
+     * @return A Response object indicating the result of the operation:
+     *         - 200 OK if the user is successfully created.
+     *         - 409 Conflict if a user with the same UID already exists.
+     *         - 400 Bad Request if there is an error during user creation.
+     * @throws ServiceException If there is an issue with authorization or database access.
+     */
     @POST
     public Response createUser(
-            @HeaderParam("Authentication") String token, User user) {
+        @HeaderParam("Authentication") String token,
+        User user
+    ) {
         User authorizingUser = null;
-        logger.info("Handling createUser request for uid token: " + user.uid + " " + token);
+        logger.info(
+            "Handling createUser request for uid token: " +
+            user.uid +
+            " " +
+            token
+        );
         try {
             try {
                 if (token != null && !token.isEmpty()) {
-                    authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
+                    authorizingUser = userPort.getAuthorizing(
+                        authPort.getUserId(token)
+                    );
                 }
             } catch (IotDatabaseException e) {
                 logger.error("getUser: " + e.getMessage());
@@ -179,13 +208,18 @@ public class UserRestAdapter {
     @DELETE
     @Path("/{uid}")
     public Response deleteUser(
-            @HeaderParam("Authentication") String token,
-            @PathParam("uid") String uid) {
-        logger.info("Handling deleteUser request for uid token: " + uid + " " + token);
+        @HeaderParam("Authentication") String token,
+        @PathParam("uid") String uid
+    ) {
+        logger.info(
+            "Handling deleteUser request for uid token: " + uid + " " + token
+        );
 
         User authorizingUser;
         try {
-            authorizingUser = userPort.getAuthorizing(authPort.getUserId(token));
+            authorizingUser = userPort.getAuthorizing(
+                authPort.getUserId(token)
+            );
         } catch (IotDatabaseException e) {
             logger.error("getUser: " + e.getMessage());
             e.printStackTrace();
@@ -206,8 +240,7 @@ public class UserRestAdapter {
         }
         return Response.ok().build();
     }
-
-/*     
+    /*
     @GET
     @Path("/confirm")
     public Response confirmUser(
@@ -222,7 +255,7 @@ public class UserRestAdapter {
             @QueryParam("token") String token) {
         logger.info("Handling confirmUser request with token: " + token);
         return Response.ok().build();
-    } 
+    }
     */
 
 }
