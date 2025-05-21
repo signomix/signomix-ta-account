@@ -759,14 +759,16 @@ public class UserLogic {
                 searchParams[0],
                 searchParams[1]
             );
+            return users;
         }
 
         if ((organizationId != null && tenantId == null) || tenantId == 0) {
-            if (
+            /* if (
                 isTenantAdmin(authorizingUser, organizationId) ||
                 isSystemAdmin(authorizingUser) ||
                 isManagingAdmin(authorizingUser, organizationId)
-            ) {
+            ) { */
+            if (isOrganizationMember(authorizingUser, organizationId)){
                 logger.info("getOrganizationUsers2");
                 users = (ArrayList) userDao.getOrganizationUsers(
                     organizationId,
@@ -775,6 +777,7 @@ public class UserLogic {
                     searchParams[0],
                     searchParams[1]
                 );
+                return users;
             } else {
                 logger.info("getOrganizationUsers2a");
             }
@@ -783,11 +786,12 @@ public class UserLogic {
         if (
             organizationId != null &&
             tenantId != null &&
-            tenantId > 0 &&
-            (isSystemAdmin(authorizingUser) ||
+            tenantId > 0
+/*             && (isSystemAdmin(authorizingUser) ||
                 isTenantAdmin(authorizingUser, organizationId) ||
-                isManagingAdmin(authorizingUser, organizationId))
+                isManagingAdmin(authorizingUser, organizationId)) */
         ) {
+            if(isTenantMember(authorizingUser, organizationId, tenantId)){
             logger.info("getOrganizationUsers3");
             users = (ArrayList) userDao.getTenantUsers(
                 tenantId,
@@ -796,6 +800,8 @@ public class UserLogic {
                 searchParams[0],
                 searchParams[1]
             );
+            return users;
+            }
         }
         return users;
     }
