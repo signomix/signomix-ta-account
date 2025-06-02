@@ -473,7 +473,12 @@ public class UserLogic {
         // if (user.phonePrefix != null)
         //     updatedUser.phonePrefix = user.phonePrefix;
         updatedUser.phonePrefix = "+48"; // only polish phone numbers are allowed
-        if (user.phone != null) updatedUser.phone = user.phone;
+        if (user.phone != null) {
+            updatedUser.phone = user.phone;
+        } else {
+            updatedUser.phone = null;
+        }
+
         if (
             user.generalNotificationChannel != null
         ) updatedUser.generalNotificationChannel =
